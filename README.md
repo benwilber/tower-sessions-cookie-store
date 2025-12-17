@@ -79,7 +79,8 @@ let app = Router::new()
 - `domain` (default: none)
 - `expiry` (default: none)
   - `Expiry::OnSessionEnd`: no `Max-Age` is set
-  - `Expiry::OnInactivity(d)`: `Max-Age` is set from the record expiry (sliding when saved)
+  - `Expiry::OnInactivity(d)`: expiration is computed from the last time the session was modified
+    (reads do not count). If you need sliding expiry on every request, set `always_save = true`.
   - `Expiry::AtDateTime(t)`: `Max-Age` is set from the record expiry (absolute unless changed)
 - `always_save` (default: `false`): when `true`, refreshes cookie/expiry on every request even if
   the session is not modified
