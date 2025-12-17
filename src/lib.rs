@@ -10,7 +10,7 @@ pub mod layer;
 mod store;
 
 pub use crate::config::CookieSessionConfig;
-pub use crate::controller::{CookieController, PlaintextCookie};
+pub use crate::controller::CookieController;
 pub use crate::layer::CookieSessionManagerLayer;
 
 #[cfg(feature = "signed")]
@@ -18,6 +18,9 @@ pub use crate::controller::SignedCookie;
 
 #[cfg(feature = "private")]
 pub use crate::controller::PrivateCookie;
+
+#[cfg(feature = "dangerous-plaintext")]
+pub use crate::controller::PlaintextCookie;
 
 #[cfg(test)]
 mod tests {
@@ -540,9 +543,18 @@ mod tests {
 
         use super::*;
 
+        fn make_layer() -> (
+            tower_cookies::Key,
+            CookieSessionManagerLayer<crate::SignedCookie>,
+        ) {
+            let key = tower_cookies::Key::generate();
+            let layer = CookieSessionManagerLayer::signed(key.clone());
+            (key, layer)
+        }
+
         #[tokio::test]
         async fn basic_service_test() {
-            let session_layer = CookieSessionManagerLayer::new();
+            let (_key, session_layer) = make_layer();
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -573,7 +585,7 @@ mod tests {
 
         #[tokio::test]
         async fn bogus_cookie_test() {
-            let session_layer = CookieSessionManagerLayer::new();
+            let (_key, session_layer) = make_layer();
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -600,7 +612,7 @@ mod tests {
 
         #[tokio::test]
         async fn no_set_cookie_test() {
-            let session_layer = CookieSessionManagerLayer::new();
+            let (_key, session_layer) = make_layer();
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(noop_handler);
@@ -616,7 +628,8 @@ mod tests {
         #[tokio::test]
         async fn name_test() {
             let config = CookieSessionConfig::default().with_name("my.sid");
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (_key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -631,7 +644,7 @@ mod tests {
 
         #[tokio::test]
         async fn http_only_test() {
-            let session_layer = CookieSessionManagerLayer::new();
+            let (_key, session_layer) = make_layer();
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -644,7 +657,8 @@ mod tests {
             assert!(cookie_value_matches(&res, |s| s.contains("HttpOnly")));
 
             let config = CookieSessionConfig::default().with_http_only(false);
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (_key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -660,7 +674,8 @@ mod tests {
         #[tokio::test]
         async fn same_site_strict_test() {
             let config = CookieSessionConfig::default().with_same_site(SameSite::Strict);
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (_key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -676,7 +691,8 @@ mod tests {
         #[tokio::test]
         async fn same_site_lax_test() {
             let config = CookieSessionConfig::default().with_same_site(SameSite::Lax);
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (_key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -692,7 +708,8 @@ mod tests {
         #[tokio::test]
         async fn same_site_none_test() {
             let config = CookieSessionConfig::default().with_same_site(SameSite::None);
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (_key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -708,7 +725,8 @@ mod tests {
         #[tokio::test]
         async fn expiry_on_session_end_test() {
             let config = CookieSessionConfig::default().with_expiry(Expiry::OnSessionEnd);
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (_key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -726,7 +744,8 @@ mod tests {
             let inactivity_duration = time::Duration::hours(2);
             let config = CookieSessionConfig::default()
                 .with_expiry(Expiry::OnInactivity(inactivity_duration));
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (_key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -745,7 +764,8 @@ mod tests {
             let expiry_time = time::OffsetDateTime::now_utc() + time::Duration::weeks(1);
             let config =
                 CookieSessionConfig::default().with_expiry(Expiry::AtDateTime(expiry_time));
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (_key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -764,7 +784,8 @@ mod tests {
             let config = CookieSessionConfig::default()
                 .with_expiry(Expiry::OnSessionEnd)
                 .with_always_save(true);
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let mut svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -773,16 +794,16 @@ mod tests {
                 .body(Body::empty())
                 .expect("request builds successfully");
             let res1 = svc.call(req1).await.expect("service call succeeds");
-            let cookie1 = get_cookie_value(&res1);
-            let sid1 = get_session_id(&res1);
-            let rec1 = get_record(&res1);
+            let cookie1 = get_wire_cookie_value(&res1);
+            let sid1 = get_session_id(&res1, &key);
+            let rec1 = get_record(&res1, &key);
             let req2 = Request::builder()
                 .header(http::header::COOKIE, format!("id={}", cookie1))
                 .body(Body::empty())
                 .expect("request builds successfully");
             let res2 = svc.call(req2).await.expect("service call succeeds");
-            let sid2 = get_session_id(&res2);
-            let rec2 = get_record(&res2);
+            let sid2 = get_session_id(&res2, &key);
+            let rec2 = get_record(&res2, &key);
 
             assert!(cookie_value_matches(&res2, |s| !s.contains("Max-Age")));
             assert!(sid1 == sid2);
@@ -795,7 +816,8 @@ mod tests {
             let config = CookieSessionConfig::default()
                 .with_expiry(Expiry::OnInactivity(inactivity_duration))
                 .with_always_save(true);
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let mut svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -804,16 +826,16 @@ mod tests {
                 .body(Body::empty())
                 .expect("request builds successfully");
             let res1 = svc.call(req1).await.expect("service call succeeds");
-            let cookie1 = get_cookie_value(&res1);
-            let sid1 = get_session_id(&res1);
-            let rec1 = get_record(&res1);
+            let cookie1 = get_wire_cookie_value(&res1);
+            let sid1 = get_session_id(&res1, &key);
+            let rec1 = get_record(&res1, &key);
             let req2 = Request::builder()
                 .header(http::header::COOKIE, format!("id={}", cookie1))
                 .body(Body::empty())
                 .expect("request builds successfully");
             let res2 = svc.call(req2).await.expect("service call succeeds");
-            let sid2 = get_session_id(&res2);
-            let rec2 = get_record(&res2);
+            let sid2 = get_session_id(&res2, &key);
+            let rec2 = get_record(&res2, &key);
 
             let expected_max_age = inactivity_duration.whole_seconds();
             assert!(cookie_has_expected_max_age(&res2, expected_max_age));
@@ -827,7 +849,8 @@ mod tests {
             let config = CookieSessionConfig::default()
                 .with_expiry(Expiry::AtDateTime(expiry_time))
                 .with_always_save(true);
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let mut svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -836,16 +859,16 @@ mod tests {
                 .body(Body::empty())
                 .expect("request builds successfully");
             let res1 = svc.call(req1).await.expect("service call succeeds");
-            let cookie1 = get_cookie_value(&res1);
-            let sid1 = get_session_id(&res1);
-            let rec1 = get_record(&res1);
+            let cookie1 = get_wire_cookie_value(&res1);
+            let sid1 = get_session_id(&res1, &key);
+            let rec1 = get_record(&res1, &key);
             let req2 = Request::builder()
                 .header(http::header::COOKIE, format!("id={}", cookie1))
                 .body(Body::empty())
                 .expect("request builds successfully");
             let res2 = svc.call(req2).await.expect("service call succeeds");
-            let sid2 = get_session_id(&res2);
-            let rec2 = get_record(&res2);
+            let sid2 = get_session_id(&res2, &key);
+            let rec2 = get_record(&res2, &key);
 
             let expected_max_age = (expiry_time - time::OffsetDateTime::now_utc()).whole_seconds();
             assert!(cookie_has_expected_max_age(&res2, expected_max_age));
@@ -856,7 +879,8 @@ mod tests {
         #[tokio::test]
         async fn secure_test() {
             let config = CookieSessionConfig::default().with_secure(true);
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (_key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -869,7 +893,8 @@ mod tests {
             assert!(cookie_value_matches(&res, |s| s.contains("Secure")));
 
             let config = CookieSessionConfig::default().with_secure(false);
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (_key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -885,7 +910,8 @@ mod tests {
         #[tokio::test]
         async fn path_test() {
             let config = CookieSessionConfig::default().with_path("/foo/bar");
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (_key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -901,7 +927,8 @@ mod tests {
         #[tokio::test]
         async fn domain_test() {
             let config = CookieSessionConfig::default().with_domain("example.com");
-            let session_layer = CookieSessionManagerLayer::new().with_config(config);
+            let (_key, session_layer) = make_layer();
+            let session_layer = session_layer.with_config(config);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -920,8 +947,7 @@ mod tests {
             use tower_cookies::Key;
 
             let key = Key::generate();
-            let session_layer =
-                CookieSessionManagerLayer::new().with_controller(crate::SignedCookie::new(key));
+            let session_layer = CookieSessionManagerLayer::signed(key);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -940,8 +966,7 @@ mod tests {
             use tower_cookies::Key;
 
             let key = Key::generate();
-            let session_layer =
-                CookieSessionManagerLayer::new().with_controller(crate::PrivateCookie::new(key));
+            let session_layer = CookieSessionManagerLayer::private(key);
             let svc = ServiceBuilder::new()
                 .layer(session_layer)
                 .service_fn(handler);
@@ -982,7 +1007,7 @@ mod tests {
                 })
         }
 
-        fn get_cookie_value(res: &Response<Body>) -> String {
+        fn get_wire_cookie_value(res: &Response<Body>) -> String {
             let set_cookie = res
                 .headers()
                 .get(http::header::SET_COOKIE)
@@ -1000,13 +1025,33 @@ mod tests {
                 .to_string()
         }
 
-        fn get_session_id(res: &Response<Body>) -> String {
-            let record = get_record(res);
+        fn get_unsigned_cookie_value(res: &Response<Body>, key: &tower_cookies::Key) -> String {
+            let set_cookie = res
+                .headers()
+                .get(http::header::SET_COOKIE)
+                .expect("response sets a session cookie");
+            let set_cookie = set_cookie
+                .to_str()
+                .expect("set-cookie header is valid utf-8");
+            let cookie = tower_cookies::Cookie::parse_encoded(set_cookie)
+                .expect("set-cookie parses successfully")
+                .into_owned();
+            let mut jar = tower_cookies::cookie::CookieJar::new();
+            jar.add_original(cookie);
+            jar.signed(key)
+                .get("id")
+                .expect("signed jar returns session cookie")
+                .value()
+                .to_string()
+        }
+
+        fn get_session_id(res: &Response<Body>, key: &tower_cookies::Key) -> String {
+            let record = get_record(res, key);
             record.id.to_string()
         }
 
-        fn get_record(res: &Response<Body>) -> Record {
-            let cookie_value = get_cookie_value(res);
+        fn get_record(res: &Response<Body>, key: &tower_cookies::Key) -> Record {
+            let cookie_value = get_unsigned_cookie_value(res, key);
             crate::codec::decode_record(&cookie_value).expect("cookie record decodes successfully")
         }
     }
@@ -1555,7 +1600,8 @@ mod tests {
                 if let Some(domain) = domain {
                     config = config.with_domain(domain);
                 }
-                let session_manager = CookieSessionManagerLayer::new().with_config(config);
+                let key = tower_cookies::Key::generate();
+                let session_manager = CookieSessionManagerLayer::signed(key).with_config(config);
                 routes().layer(session_manager)
             }
 

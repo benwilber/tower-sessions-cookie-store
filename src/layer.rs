@@ -11,25 +11,43 @@ use tower_layer::Layer;
 use tower_service::Service;
 use tower_sessions_core::Session;
 
-use crate::{
-    codec,
-    config::CookieSessionConfig,
-    controller::{CookieController, PlaintextCookie},
-    store::CookieStore,
-};
+use crate::{codec, config::CookieSessionConfig, controller::CookieController, store::CookieStore};
 
 #[derive(Debug, Clone)]
-pub struct CookieSessionManagerLayer<C: CookieController = PlaintextCookie> {
+pub struct CookieSessionManagerLayer<C: CookieController> {
     config: CookieSessionConfig,
     controller: C,
 }
 
-impl CookieSessionManagerLayer<PlaintextCookie> {
+#[cfg(feature = "signed")]
+impl CookieSessionManagerLayer<crate::SignedCookie> {
+    #[must_use]
+    pub fn signed(key: tower_cookies::Key) -> Self {
+        Self {
+            config: CookieSessionConfig::default(),
+            controller: crate::SignedCookie::new(key),
+        }
+    }
+}
+
+#[cfg(feature = "private")]
+impl CookieSessionManagerLayer<crate::PrivateCookie> {
+    #[must_use]
+    pub fn private(key: tower_cookies::Key) -> Self {
+        Self {
+            config: CookieSessionConfig::default(),
+            controller: crate::PrivateCookie::new(key),
+        }
+    }
+}
+
+#[cfg(feature = "dangerous-plaintext")]
+impl CookieSessionManagerLayer<crate::PlaintextCookie> {
     #[must_use]
     pub fn new() -> Self {
         Self {
             config: CookieSessionConfig::default(),
-            controller: PlaintextCookie,
+            controller: crate::PlaintextCookie,
         }
     }
 }
@@ -53,7 +71,8 @@ impl<C: CookieController> CookieSessionManagerLayer<C> {
     }
 }
 
-impl Default for CookieSessionManagerLayer<PlaintextCookie> {
+#[cfg(feature = "dangerous-plaintext")]
+impl Default for CookieSessionManagerLayer<crate::PlaintextCookie> {
     fn default() -> Self {
         Self::new()
     }
@@ -111,8 +130,16 @@ where
                 }
             };
 
+            let raw_cookie_present = cookies.get(&config.name).is_some();
             let session_cookie = controller.get(&cookies, &config.name);
             let mut initial_cookie_removed = false;
+
+            if session_cookie.is_none() && raw_cookie_present && config.clear_on_decode_error {
+                let mut cookie = tower_cookies::Cookie::new(config.name.clone(), "");
+                config.apply_removal_attributes(&mut cookie);
+                controller.remove(&cookies, cookie);
+                initial_cookie_removed = true;
+            }
 
             let decoded_record = match session_cookie.as_ref() {
                 Some(cookie) => match codec::decode_record(cookie.value()) {
@@ -120,30 +147,22 @@ where
                         Some(record)
                     }
                     Ok(_expired) => {
-                        if config.clear_on_decode_error {
-                            let store = CookieStore::new(
-                                cookies.clone(),
-                                controller.clone(),
-                                config.clone(),
-                                None,
-                                false,
-                            );
-                            store.remove_cookie();
+                        if config.clear_on_decode_error
+                            && let Some(mut cookie) = session_cookie.clone()
+                        {
+                            config.apply_removal_attributes(&mut cookie);
+                            controller.remove(&cookies, cookie);
                             initial_cookie_removed = true;
                         }
                         None
                     }
                     Err(err) => {
                         tracing::warn!(err = %err, "cookie session decode failed");
-                        if config.clear_on_decode_error {
-                            let store = CookieStore::new(
-                                cookies.clone(),
-                                controller.clone(),
-                                config.clone(),
-                                None,
-                                false,
-                            );
-                            store.remove_cookie();
+                        if config.clear_on_decode_error
+                            && let Some(mut cookie) = session_cookie.clone()
+                        {
+                            config.apply_removal_attributes(&mut cookie);
+                            controller.remove(&cookies, cookie);
                             initial_cookie_removed = true;
                         }
                         None

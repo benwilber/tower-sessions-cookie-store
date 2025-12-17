@@ -8,9 +8,11 @@ pub trait CookieController: Debug + Clone + Send + Sync + 'static {
     fn remove(&self, cookies: &Cookies, cookie: Cookie<'static>);
 }
 
+#[cfg(feature = "dangerous-plaintext")]
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PlaintextCookie;
 
+#[cfg(feature = "dangerous-plaintext")]
 impl CookieController for PlaintextCookie {
     fn get(&self, cookies: &Cookies, name: &str) -> Option<Cookie<'static>> {
         cookies.get(name).map(Cookie::into_owned)
