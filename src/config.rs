@@ -22,7 +22,7 @@ pub struct CookieSessionConfig {
 impl Default for CookieSessionConfig {
     fn default() -> Self {
         Self {
-            name: "id".into(),
+            name: "session".into(),
             http_only: true,
             same_site: SameSite::Strict,
             expiry: None,

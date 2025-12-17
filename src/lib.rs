@@ -145,7 +145,7 @@ mod tests {
                 .service_fn(handler);
 
             let req = Request::builder()
-                .header(header::COOKIE, "id=bogus")
+                .header(header::COOKIE, "session=bogus")
                 .body(Body::empty())
                 .expect("request builds successfully");
             let res = svc.oneshot(req).await.expect("service call succeeds");
@@ -346,7 +346,7 @@ mod tests {
                 .expect("request builds successfully");
             let res1 = svc.call(req1).await.expect("service call succeeds");
             let cookie1 = get_session_cookie(&res1);
-            let rec1 = get_record(cookie1.clone(), &key, "id");
+            let rec1 = get_record(cookie1.clone(), &key, "session");
 
             let req2 = Request::builder()
                 .header(header::COOKIE, cookie_header_value(&cookie1))
@@ -354,7 +354,7 @@ mod tests {
                 .expect("request builds successfully");
             let res2 = svc.call(req2).await.expect("service call succeeds");
             let cookie2 = get_session_cookie(&res2);
-            let rec2 = get_record(cookie2.clone(), &key, "id");
+            let rec2 = get_record(cookie2.clone(), &key, "session");
 
             assert!(cookie2.max_age().is_none());
             assert_eq!(rec1.id, rec2.id);
@@ -378,7 +378,7 @@ mod tests {
                 .expect("request builds successfully");
             let res1 = svc.call(req1).await.expect("service call succeeds");
             let cookie1 = get_session_cookie(&res1);
-            let rec1 = get_record(cookie1.clone(), &key, "id");
+            let rec1 = get_record(cookie1.clone(), &key, "session");
 
             let req2 = Request::builder()
                 .header(header::COOKIE, cookie_header_value(&cookie1))
@@ -386,7 +386,7 @@ mod tests {
                 .expect("request builds successfully");
             let res2 = svc.call(req2).await.expect("service call succeeds");
             let cookie2 = get_session_cookie(&res2);
-            let rec2 = get_record(cookie2.clone(), &key, "id");
+            let rec2 = get_record(cookie2.clone(), &key, "session");
 
             assert_max_age_seconds_close(&cookie2, inactivity_duration.whole_seconds());
             assert_eq!(rec1.id, rec2.id);
@@ -410,7 +410,7 @@ mod tests {
                 .expect("request builds successfully");
             let res1 = svc.call(req1).await.expect("service call succeeds");
             let cookie1 = get_session_cookie(&res1);
-            let rec1 = get_record(cookie1.clone(), &key, "id");
+            let rec1 = get_record(cookie1.clone(), &key, "session");
 
             let req2 = Request::builder()
                 .header(header::COOKIE, cookie_header_value(&cookie1))
@@ -418,7 +418,7 @@ mod tests {
                 .expect("request builds successfully");
             let res2 = svc.call(req2).await.expect("service call succeeds");
             let cookie2 = get_session_cookie(&res2);
-            let rec2 = get_record(cookie2.clone(), &key, "id");
+            let rec2 = get_record(cookie2.clone(), &key, "session");
 
             let expected = (expiry_time - OffsetDateTime::now_utc()).whole_seconds();
             assert_max_age_seconds_close(&cookie2, expected);
@@ -676,7 +676,7 @@ mod tests {
 
         #[tokio::test]
         async fn bogus_session_cookie() {
-            let session_cookie = Cookie::new("id", "AAAAAAAAAAAAAAAAAAAAAA");
+            let session_cookie = Cookie::new("session", "AAAAAAAAAAAAAAAAAAAAAA");
             let req = Request::builder()
                 .uri("/insert")
                 .header(header::COOKIE, cookie_header_value(&session_cookie))
@@ -695,7 +695,7 @@ mod tests {
 
         #[tokio::test]
         async fn malformed_session_cookie() {
-            let session_cookie = Cookie::new("id", "malformed");
+            let session_cookie = Cookie::new("session", "malformed");
             let req = Request::builder()
                 .uri("/")
                 .header(header::COOKIE, cookie_header_value(&session_cookie))
@@ -725,7 +725,7 @@ mod tests {
                 .expect("service call succeeds");
             let session_cookie = get_session_cookie(res.headers());
 
-            assert_eq!(session_cookie.name(), "id");
+            assert_eq!(session_cookie.name(), "session");
             assert_eq!(session_cookie.http_only(), Some(true));
             assert_eq!(session_cookie.same_site(), Some(SameSite::Strict));
             assert!(
@@ -750,7 +750,7 @@ mod tests {
                 .expect("service call succeeds");
             let session_cookie = get_session_cookie(res.headers());
 
-            assert_eq!(session_cookie.name(), "id");
+            assert_eq!(session_cookie.name(), "session");
             assert_eq!(session_cookie.http_only(), Some(true));
             assert_eq!(session_cookie.same_site(), Some(SameSite::Strict));
             assert!(session_cookie.max_age().is_none());
