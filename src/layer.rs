@@ -219,18 +219,37 @@ where
             }
 
             if !modified && !config.always_save {
+                tracing::debug!(
+                    cookie_name = %config.name,
+                    "cookie session not saved (not modified and always_save is false)"
+                );
                 return Ok(res);
             }
 
             if res.status().is_server_error() {
+                tracing::debug!(
+                    cookie_name = %config.name,
+                    status = %res.status(),
+                    "cookie session not saved (response is 5xx)"
+                );
                 return Ok(res);
             }
 
             if cookie_store.did_write_cookie() {
+                tracing::debug!(
+                    cookie_name = %config.name,
+                    "cookie session not saved (cookie already written)"
+                );
                 return Ok(res);
             }
 
             cookie_store.set_expiry_hint(session.expiry());
+            tracing::debug!(
+                cookie_name = %config.name,
+                always_save = config.always_save,
+                modified,
+                "cookie session saving"
+            );
 
             if let Err(err) = session.save().await {
                 tracing::error!(
