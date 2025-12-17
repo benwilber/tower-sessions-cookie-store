@@ -4,7 +4,7 @@
 //! extensions and persists the session record into a cookie.
 //!
 //! # Security
-//! The default and recommended format is a signed cookie (`signed` feature).
+//! The default format is a signed cookie (`signed` feature).
 //!
 //! The `dangerous-plaintext` feature enables a plaintext cookie controller. This offers **no tamper
 //! resistance** and should only be used for **testing and debugging**. Never enable or use this in
