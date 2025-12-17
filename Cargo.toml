@@ -2,6 +2,8 @@
 name = "tower-sessions-cookie-store"
 version = "0.1.0"
 edition = "2024"
+license = "MIT"
+readme = "README.md"
 
 [dependencies]
 async-trait = "0.1.89"
