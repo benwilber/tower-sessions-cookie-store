@@ -15,6 +15,7 @@ mod codec;
 mod config;
 mod controller;
 pub mod format;
+/// Tower layer for cookie-backed sessions.
 pub mod layer;
 mod store;
 

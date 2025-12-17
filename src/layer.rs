@@ -1,3 +1,9 @@
+//! Tower layer and service for cookie-backed sessions.
+//!
+//! `CookieSessionManagerLayer` wraps [`tower_cookies::CookieManager`] and inserts a
+//! [`tower_sessions_core::Session`] into request extensions. The session record is stored in a
+//! cookie via the configured [`crate::CookieController`].
+
 use std::{
     future::Future,
     pin::Pin,
@@ -14,6 +20,9 @@ use tower_sessions_core::Session;
 use crate::{codec, config::CookieSessionConfig, controller::CookieController, store::CookieStore};
 
 #[derive(Debug, Clone)]
+/// A Tower [`Layer`] that provides cookie-backed sessions.
+///
+/// This layer wraps [`tower_cookies::CookieManager`] internally.
 pub struct CookieSessionManagerLayer<C: CookieController> {
     config: CookieSessionConfig,
     controller: C,
@@ -22,6 +31,7 @@ pub struct CookieSessionManagerLayer<C: CookieController> {
 #[cfg(feature = "signed")]
 impl CookieSessionManagerLayer<crate::SignedCookie> {
     #[must_use]
+    /// Creates a cookie session manager that stores sessions in signed cookies.
     pub fn signed(key: crate::Key) -> Self {
         Self {
             config: CookieSessionConfig::default(),
@@ -33,6 +43,7 @@ impl CookieSessionManagerLayer<crate::SignedCookie> {
 #[cfg(feature = "private")]
 impl CookieSessionManagerLayer<crate::PrivateCookie> {
     #[must_use]
+    /// Creates a cookie session manager that stores sessions in private (encrypted) cookies.
     pub fn private(key: crate::Key) -> Self {
         Self {
             config: CookieSessionConfig::default(),
@@ -60,12 +71,14 @@ impl CookieSessionManagerLayer<crate::DangerousPlaintextCookie> {
 
 impl<C: CookieController> CookieSessionManagerLayer<C> {
     #[must_use]
+    /// Sets the [`CookieSessionConfig`] used by this layer.
     pub fn with_config(mut self, config: CookieSessionConfig) -> Self {
         self.config = config;
         self
     }
 
     #[must_use]
+    /// Replaces the cookie controller used by this layer.
     pub fn with_controller<C2: CookieController>(
         self,
         controller: C2,
@@ -85,6 +98,10 @@ impl Default for CookieSessionManagerLayer<crate::DangerousPlaintextCookie> {
 }
 
 #[derive(Debug, Clone)]
+/// The service produced by [`CookieSessionManagerLayer`].
+///
+/// This type is part of the public API surface due to trait constraints, but it is primarily an
+/// implementation detail.
 pub struct CookieSessionManager<S, C: CookieController> {
     inner: S,
     config: CookieSessionConfig,

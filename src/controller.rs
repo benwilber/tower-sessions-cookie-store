@@ -1,10 +1,24 @@
+//! Cookie controller implementations.
+//!
+//! A [`CookieController`] defines how a session cookie is read/written/removed from
+//! [`tower_cookies::Cookies`]. This crate provides controllers for plaintext, signed, and private
+//! cookies (feature-gated).
+
 use std::fmt::Debug;
 
 use tower_cookies::{Cookie, Cookies};
 
+/// Reads/writes/removes a session cookie from a [`Cookies`] jar.
+///
+/// The controller determines whether the cookie is stored as plaintext, signed, or encrypted.
 pub trait CookieController: Debug + Clone + Send + Sync + 'static {
+    /// Reads the named session cookie from the jar.
     fn get(&self, cookies: &Cookies, name: &str) -> Option<Cookie<'static>>;
+
+    /// Adds a session cookie to the jar.
     fn add(&self, cookies: &Cookies, cookie: Cookie<'static>);
+
+    /// Removes a session cookie from the jar.
     fn remove(&self, cookies: &Cookies, cookie: Cookie<'static>);
 }
 
@@ -35,12 +49,16 @@ impl CookieController for DangerousPlaintextCookie {
 
 #[cfg(feature = "signed")]
 #[derive(Debug, Clone)]
+/// A controller that stores session state in signed cookies.
+///
+/// Signed cookies provide integrity (tamper evidence) but do not provide confidentiality.
 pub struct SignedCookie {
     key: crate::Key,
 }
 
 #[cfg(feature = "signed")]
 impl SignedCookie {
+    /// Creates a signed cookie controller using `key`.
     pub fn new(key: crate::Key) -> Self {
         Self { key }
     }
@@ -63,12 +81,14 @@ impl CookieController for SignedCookie {
 
 #[cfg(feature = "private")]
 #[derive(Debug, Clone)]
+/// A controller that stores session state in private (encrypted + authenticated) cookies.
 pub struct PrivateCookie {
     key: crate::Key,
 }
 
 #[cfg(feature = "private")]
 impl PrivateCookie {
+    /// Creates a private cookie controller using `key`.
     pub fn new(key: crate::Key) -> Self {
         Self { key }
     }

@@ -1,3 +1,8 @@
+//! Cookie session configuration.
+//!
+//! [`CookieSessionConfig`] controls cookie attributes and persistence behavior (expiry, write
+//! policy, and limits).
+
 use std::borrow::Cow;
 
 use time::{Duration, OffsetDateTime};
@@ -6,6 +11,9 @@ use tower_cookies::Cookie;
 use crate::{Expiry, SameSite};
 
 #[derive(Debug, Clone)]
+/// Configuration for cookie-backed sessions.
+///
+/// Use the `with_*` builder methods to override defaults.
 pub struct CookieSessionConfig {
     pub(crate) name: Cow<'static, str>,
     pub(crate) http_only: bool,
@@ -38,66 +46,80 @@ impl Default for CookieSessionConfig {
 
 impl CookieSessionConfig {
     #[must_use]
+    /// Sets the cookie name.
     pub fn with_name<N: Into<Cow<'static, str>>>(mut self, name: N) -> Self {
         self.name = name.into();
         self
     }
 
     #[must_use]
+    /// Sets the cookie `HttpOnly` attribute.
     pub fn with_http_only(mut self, http_only: bool) -> Self {
         self.http_only = http_only;
         self
     }
 
     #[must_use]
+    /// Sets the cookie `SameSite` attribute.
     pub fn with_same_site(mut self, same_site: SameSite) -> Self {
         self.same_site = same_site;
         self
     }
 
     #[must_use]
+    /// Sets the session expiry policy.
+    ///
+    /// Note: `Expiry::OnInactivity` is computed from the last time the session was modified (reads
+    /// do not count). If you need sliding expiry on every request, set `always_save = true`.
     pub fn with_expiry(mut self, expiry: Expiry) -> Self {
         self.expiry = Some(expiry);
         self
     }
 
     #[must_use]
+    /// Sets the cookie `Secure` attribute.
     pub fn with_secure(mut self, secure: bool) -> Self {
         self.secure = secure;
         self
     }
 
     #[must_use]
+    /// Sets the cookie `Path` attribute.
     pub fn with_path<P: Into<Cow<'static, str>>>(mut self, path: P) -> Self {
         self.path = path.into();
         self
     }
 
     #[must_use]
+    /// Sets the cookie `Domain` attribute.
     pub fn with_domain<D: Into<Cow<'static, str>>>(mut self, domain: D) -> Self {
         self.domain = Some(domain.into());
         self
     }
 
     #[must_use]
+    /// Removes the cookie `Domain` attribute.
     pub fn without_domain(mut self) -> Self {
         self.domain = None;
         self
     }
 
     #[must_use]
+    /// When `true`, saves the session on every request (even if it was not modified).
     pub fn with_always_save(mut self, always_save: bool) -> Self {
         self.always_save = always_save;
         self
     }
 
     #[must_use]
+    /// Sets the maximum encoded cookie value size, in bytes.
     pub fn with_max_cookie_bytes(mut self, max_cookie_bytes: usize) -> Self {
         self.max_cookie_bytes = max_cookie_bytes;
         self
     }
 
     #[must_use]
+    /// When `true`, clears invalid/expired/undecodable cookies.
     pub fn with_clear_on_decode_error(mut self, clear_on_decode_error: bool) -> Self {
         self.clear_on_decode_error = clear_on_decode_error;
         self
