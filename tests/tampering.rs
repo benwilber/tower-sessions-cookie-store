@@ -1,40 +1,9 @@
-#![cfg(feature = "dangerous-plaintext")]
-
 use axum::{Router, body::Body, routing::get};
 use http::{Request, header};
 use http_body_util::BodyExt as _;
 use tower::ServiceExt as _;
 use tower_cookies::Cookie;
-use tower_sessions_cookie_store::{
-    CookieSessionConfig, CookieSessionManagerLayer, Session, format,
-};
-
-fn app() -> Router {
-    let config = CookieSessionConfig::default().with_secure(false);
-    let layer = CookieSessionManagerLayer::dangerous_plaintext().with_config(config);
-
-    Router::new()
-        .route(
-            "/set-user",
-            get(|session: Session| async move {
-                session
-                    .insert("user", "alice")
-                    .await
-                    .expect("session insert succeeds");
-            }),
-        )
-        .route(
-            "/get-user",
-            get(|session: Session| async move {
-                session
-                    .get::<String>("user")
-                    .await
-                    .expect("session get succeeds")
-                    .expect("session contains user")
-            }),
-        )
-        .layer(layer)
-}
+use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer, Key, Session};
 
 async fn body_string(body: Body) -> String {
     let bytes = body
@@ -61,34 +30,46 @@ fn cookie_header_value(cookie: &Cookie<'_>) -> String {
     cookie.encoded().to_string()
 }
 
-#[tokio::test]
-async fn plaintext_roundtrip() {
-    let app = app();
-
-    let req = Request::builder()
-        .uri("/set-user")
-        .body(Body::empty())
-        .expect("request builds successfully");
-    let res = app
-        .clone()
-        .oneshot(req)
-        .await
-        .expect("service call succeeds");
-    let session_cookie = get_session_cookie(res.headers());
-
-    let req = Request::builder()
-        .uri("/get-user")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
-        .body(Body::empty())
-        .expect("request builds successfully");
-    let res = app.oneshot(req).await.expect("service call succeeds");
-
-    assert_eq!(body_string(res.into_body()).await, "alice");
+fn tamper_cookie_value(cookie: &mut Cookie<'_>) {
+    let mut value = cookie.value().to_string();
+    let last = value
+        .pop()
+        .expect("cookie value has at least one character");
+    let replacement = if last == 'A' { 'B' } else { 'A' };
+    value.push(replacement);
+    cookie.set_value(value);
 }
 
+fn routes() -> Router {
+    Router::new()
+        .route(
+            "/set-user",
+            get(|session: Session| async move {
+                session
+                    .insert("user", "alice")
+                    .await
+                    .expect("session insert succeeds");
+            }),
+        )
+        .route(
+            "/get-user",
+            get(|session: Session| async move {
+                session
+                    .get::<String>("user")
+                    .await
+                    .expect("session get succeeds")
+                    .unwrap_or_else(|| "none".to_string())
+            }),
+        )
+}
+
+#[cfg(feature = "signed")]
 #[tokio::test]
-async fn plaintext_allows_tampering() {
-    let app = app();
+async fn signed_rejects_tampering() {
+    let key = Key::generate();
+    let config = CookieSessionConfig::default().with_secure(false);
+    let layer = CookieSessionManagerLayer::signed(key).with_config(config);
+    let app = routes().layer(layer);
 
     let req = Request::builder()
         .uri("/set-user")
@@ -101,15 +82,7 @@ async fn plaintext_allows_tampering() {
         .expect("service call succeeds");
     let mut session_cookie = get_session_cookie(res.headers());
 
-    let mut record =
-        format::decode_record(session_cookie.value()).expect("cookie record decodes successfully");
-    record.data.insert(
-        "user".to_string(),
-        serde_json::Value::String("admin".to_string()),
-    );
-    let tampered_value =
-        format::encode_record(&record).expect("cookie record encodes successfully");
-    session_cookie.set_value(tampered_value);
+    tamper_cookie_value(&mut session_cookie);
 
     let req = Request::builder()
         .uri("/get-user")
@@ -118,5 +91,36 @@ async fn plaintext_allows_tampering() {
         .expect("request builds successfully");
     let res = app.oneshot(req).await.expect("service call succeeds");
 
-    assert_eq!(body_string(res.into_body()).await, "admin");
+    assert_eq!(body_string(res.into_body()).await, "none");
+}
+
+#[cfg(feature = "private")]
+#[tokio::test]
+async fn private_rejects_tampering() {
+    let key = Key::generate();
+    let config = CookieSessionConfig::default().with_secure(false);
+    let layer = CookieSessionManagerLayer::private(key).with_config(config);
+    let app = routes().layer(layer);
+
+    let req = Request::builder()
+        .uri("/set-user")
+        .body(Body::empty())
+        .expect("request builds successfully");
+    let res = app
+        .clone()
+        .oneshot(req)
+        .await
+        .expect("service call succeeds");
+    let mut session_cookie = get_session_cookie(res.headers());
+
+    tamper_cookie_value(&mut session_cookie);
+
+    let req = Request::builder()
+        .uri("/get-user")
+        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .body(Body::empty())
+        .expect("request builds successfully");
+    let res = app.oneshot(req).await.expect("service call succeeds");
+
+    assert_eq!(body_string(res.into_body()).await, "none");
 }
