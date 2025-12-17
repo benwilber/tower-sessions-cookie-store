@@ -47,6 +47,8 @@ impl Default for CookieSessionConfig {
 impl CookieSessionConfig {
     #[must_use]
     /// Sets the cookie name.
+    ///
+    /// Default: `"session"`.
     pub fn with_name<N: Into<Cow<'static, str>>>(mut self, name: N) -> Self {
         self.name = name.into();
         self
@@ -54,6 +56,8 @@ impl CookieSessionConfig {
 
     #[must_use]
     /// Sets the cookie `HttpOnly` attribute.
+    ///
+    /// Default: `true`.
     pub fn with_http_only(mut self, http_only: bool) -> Self {
         self.http_only = http_only;
         self
@@ -61,6 +65,8 @@ impl CookieSessionConfig {
 
     #[must_use]
     /// Sets the cookie `SameSite` attribute.
+    ///
+    /// Default: `SameSite::Strict`.
     pub fn with_same_site(mut self, same_site: SameSite) -> Self {
         self.same_site = same_site;
         self
@@ -68,6 +74,8 @@ impl CookieSessionConfig {
 
     #[must_use]
     /// Sets the session expiry policy.
+    ///
+    /// Default: none.
     ///
     /// Note: `Expiry::OnInactivity` is computed from the last time the session was modified (reads
     /// do not count). If you need sliding expiry on every request, set `always_save = true`.
@@ -78,6 +86,8 @@ impl CookieSessionConfig {
 
     #[must_use]
     /// Sets the cookie `Secure` attribute.
+    ///
+    /// Default: `true`.
     pub fn with_secure(mut self, secure: bool) -> Self {
         self.secure = secure;
         self
@@ -85,6 +95,8 @@ impl CookieSessionConfig {
 
     #[must_use]
     /// Sets the cookie `Path` attribute.
+    ///
+    /// Default: `"/"`.
     pub fn with_path<P: Into<Cow<'static, str>>>(mut self, path: P) -> Self {
         self.path = path.into();
         self
@@ -92,6 +104,8 @@ impl CookieSessionConfig {
 
     #[must_use]
     /// Sets the cookie `Domain` attribute.
+    ///
+    /// Default: none.
     pub fn with_domain<D: Into<Cow<'static, str>>>(mut self, domain: D) -> Self {
         self.domain = Some(domain.into());
         self
@@ -99,6 +113,8 @@ impl CookieSessionConfig {
 
     #[must_use]
     /// Removes the cookie `Domain` attribute.
+    ///
+    /// Default: none.
     pub fn without_domain(mut self) -> Self {
         self.domain = None;
         self
@@ -106,6 +122,8 @@ impl CookieSessionConfig {
 
     #[must_use]
     /// When `true`, saves the session on every request (even if it was not modified).
+    ///
+    /// Default: `false`.
     pub fn with_always_save(mut self, always_save: bool) -> Self {
         self.always_save = always_save;
         self
@@ -113,6 +131,8 @@ impl CookieSessionConfig {
 
     #[must_use]
     /// Sets the maximum encoded cookie value size, in bytes.
+    ///
+    /// Default: `4096`.
     pub fn with_max_cookie_bytes(mut self, max_cookie_bytes: usize) -> Self {
         self.max_cookie_bytes = max_cookie_bytes;
         self
@@ -120,6 +140,8 @@ impl CookieSessionConfig {
 
     #[must_use]
     /// When `true`, clears invalid/expired/undecodable cookies.
+    ///
+    /// Default: `true`.
     pub fn with_clear_on_decode_error(mut self, clear_on_decode_error: bool) -> Self {
         self.clear_on_decode_error = clear_on_decode_error;
         self
