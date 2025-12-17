@@ -1,34 +1,10 @@
+mod common;
+
 use axum::{Router, body::Body, routing::get};
 use http::{Request, header};
-use http_body_util::BodyExt as _;
 use tower::ServiceExt as _;
 use tower_cookies::Cookie;
 use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer, Key, Session};
-
-async fn body_string(body: Body) -> String {
-    let bytes = body
-        .collect()
-        .await
-        .expect("body collects successfully")
-        .to_bytes();
-    String::from_utf8_lossy(&bytes).into_owned()
-}
-
-fn get_session_cookie(headers: &http::HeaderMap) -> Cookie<'static> {
-    let set_cookie = headers
-        .get(header::SET_COOKIE)
-        .expect("response includes set-cookie header");
-    let set_cookie = set_cookie
-        .to_str()
-        .expect("set-cookie header is valid utf-8");
-    Cookie::parse_encoded(set_cookie)
-        .expect("set-cookie parses successfully")
-        .into_owned()
-}
-
-fn cookie_header_value(cookie: &Cookie<'_>) -> String {
-    cookie.encoded().to_string()
-}
 
 fn tamper_cookie_value(cookie: &mut Cookie<'_>) {
     let mut value = cookie.value().to_string();
@@ -54,11 +30,14 @@ fn routes() -> Router {
         .route(
             "/get-user",
             get(|session: Session| async move {
-                session
+                let user = session
                     .get::<String>("user")
                     .await
-                    .expect("session get succeeds")
-                    .unwrap_or_else(|| "none".to_string())
+                    .expect("session get succeeds");
+                match user {
+                    Some(user) => user,
+                    None => "none".to_string(),
+                }
             }),
         )
 }
@@ -80,18 +59,18 @@ async fn signed_rejects_tampering() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let mut session_cookie = get_session_cookie(res.headers());
+    let mut session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     tamper_cookie_value(&mut session_cookie);
 
     let req = Request::builder()
         .uri("/get-user")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app.oneshot(req).await.expect("service call succeeds");
 
-    assert_eq!(body_string(res.into_body()).await, "none");
+    assert_eq!(common::body_string(res.into_body()).await, "none");
 }
 
 #[cfg(feature = "private")]
@@ -111,16 +90,16 @@ async fn private_rejects_tampering() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let mut session_cookie = get_session_cookie(res.headers());
+    let mut session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     tamper_cookie_value(&mut session_cookie);
 
     let req = Request::builder()
         .uri("/get-user")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app.oneshot(req).await.expect("service call succeeds");
 
-    assert_eq!(body_string(res.into_body()).await, "none");
+    assert_eq!(common::body_string(res.into_body()).await, "none");
 }

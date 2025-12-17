@@ -1,10 +1,10 @@
 #![cfg(feature = "dangerous-plaintext")]
 
+mod common;
+
 use axum::{Router, body::Body, routing::get};
 use http::{Request, header};
-use http_body_util::BodyExt as _;
 use tower::ServiceExt as _;
-use tower_cookies::Cookie;
 use tower_sessions_cookie_store::{
     CookieSessionConfig, CookieSessionManagerLayer, Session, format,
 };
@@ -36,31 +36,6 @@ fn app() -> Router {
         .layer(layer)
 }
 
-async fn body_string(body: Body) -> String {
-    let bytes = body
-        .collect()
-        .await
-        .expect("body collects successfully")
-        .to_bytes();
-    String::from_utf8_lossy(&bytes).into_owned()
-}
-
-fn get_session_cookie(headers: &http::HeaderMap) -> Cookie<'static> {
-    let set_cookie = headers
-        .get(header::SET_COOKIE)
-        .expect("response includes set-cookie header");
-    let set_cookie = set_cookie
-        .to_str()
-        .expect("set-cookie header is valid utf-8");
-    Cookie::parse_encoded(set_cookie)
-        .expect("set-cookie parses successfully")
-        .into_owned()
-}
-
-fn cookie_header_value(cookie: &Cookie<'_>) -> String {
-    cookie.encoded().to_string()
-}
-
 #[tokio::test]
 async fn plaintext_roundtrip() {
     let app = app();
@@ -74,16 +49,16 @@ async fn plaintext_roundtrip() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     let req = Request::builder()
         .uri("/get-user")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app.oneshot(req).await.expect("service call succeeds");
 
-    assert_eq!(body_string(res.into_body()).await, "alice");
+    assert_eq!(common::body_string(res.into_body()).await, "alice");
 }
 
 #[tokio::test]
@@ -99,7 +74,7 @@ async fn plaintext_allows_tampering() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let mut session_cookie = get_session_cookie(res.headers());
+    let mut session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     let mut record =
         format::decode_record(session_cookie.value()).expect("cookie record decodes successfully");
@@ -113,10 +88,10 @@ async fn plaintext_allows_tampering() {
 
     let req = Request::builder()
         .uri("/get-user")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app.oneshot(req).await.expect("service call succeeds");
 
-    assert_eq!(body_string(res.into_body()).await, "admin");
+    assert_eq!(common::body_string(res.into_body()).await, "admin");
 }

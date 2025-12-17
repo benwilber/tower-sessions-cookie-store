@@ -3,10 +3,20 @@
 use std::convert::Infallible;
 
 use axum::body::Body;
-use http::{Request, Response, header};
+use http::{HeaderMap, Request, Response, header};
+use http_body_util::BodyExt as _;
 use tower_cookies::{Cookie, Key, cookie::CookieJar};
 use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer, Session};
 use tower_sessions_core::session::Record;
+
+pub async fn body_string(body: Body) -> String {
+    let bytes = body
+        .collect()
+        .await
+        .expect("body collects successfully")
+        .to_bytes();
+    String::from_utf8_lossy(&bytes).into_owned()
+}
 
 pub async fn handler(req: Request<Body>) -> Result<Response<Body>, Infallible> {
     let session = req
@@ -39,8 +49,11 @@ pub fn make_signed_layer(
 }
 
 pub fn get_session_cookie(res: &Response<Body>) -> Cookie<'static> {
-    let set_cookie = res
-        .headers()
+    get_session_cookie_from_headers(res.headers())
+}
+
+pub fn get_session_cookie_from_headers(headers: &HeaderMap) -> Cookie<'static> {
+    let set_cookie = headers
         .get(header::SET_COOKIE)
         .expect("response includes set-cookie header");
     let set_cookie = set_cookie

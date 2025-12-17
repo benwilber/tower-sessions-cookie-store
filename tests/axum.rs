@@ -1,8 +1,9 @@
 #![cfg(feature = "signed")]
 
+mod common;
+
 use axum::{Router, body::Body, routing::get};
-use http::{HeaderMap, Request, StatusCode, header};
-use http_body_util::BodyExt as _;
+use http::{Request, StatusCode, header};
 use time::{Duration, OffsetDateTime};
 use tower::ServiceExt as _;
 use tower_cookies::Cookie;
@@ -90,31 +91,6 @@ fn routes() -> Router {
         )
 }
 
-async fn body_string(body: Body) -> String {
-    let bytes = body
-        .collect()
-        .await
-        .expect("body collects successfully")
-        .to_bytes();
-    String::from_utf8_lossy(&bytes).into_owned()
-}
-
-fn get_session_cookie(headers: &HeaderMap) -> Cookie<'static> {
-    let set_cookie = headers
-        .get_all(header::SET_COOKIE)
-        .iter()
-        .flat_map(|header| header.to_str())
-        .next()
-        .expect("response includes set-cookie header");
-    Cookie::parse_encoded(set_cookie)
-        .expect("set-cookie parses successfully")
-        .into_owned()
-}
-
-fn cookie_header_value(cookie: &Cookie<'_>) -> String {
-    cookie.encoded().to_string()
-}
-
 fn assert_duration_close(actual: Duration, expected: Duration) {
     let tolerance = Duration::seconds(1);
     assert!(
@@ -162,7 +138,7 @@ async fn bogus_session_cookie() {
     let session_cookie = Cookie::new("session", "AAAAAAAAAAAAAAAAAAAAAA");
     let req = Request::builder()
         .uri("/insert")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app(Some(Duration::hours(1)), None)
@@ -170,7 +146,7 @@ async fn bogus_session_cookie() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     assert_eq!(res.status(), StatusCode::OK);
     assert_ne!(session_cookie.value(), "AAAAAAAAAAAAAAAAAAAAAA");
@@ -181,7 +157,7 @@ async fn malformed_session_cookie() {
     let session_cookie = Cookie::new("session", "malformed");
     let req = Request::builder()
         .uri("/")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app(Some(Duration::hours(1)), None)
@@ -190,7 +166,7 @@ async fn malformed_session_cookie() {
         .await
         .expect("service call succeeds");
 
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
     assert_ne!(session_cookie.value(), "malformed");
     assert_eq!(res.status(), StatusCode::OK);
 }
@@ -206,7 +182,7 @@ async fn insert_session() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     assert_eq!(session_cookie.name(), "session");
     assert_eq!(session_cookie.http_only(), Some(true));
@@ -231,7 +207,7 @@ async fn session_max_age() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     assert_eq!(session_cookie.name(), "session");
     assert_eq!(session_cookie.http_only(), Some(true));
@@ -254,17 +230,17 @@ async fn get_session() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     let req = Request::builder()
         .uri("/get")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app.oneshot(req).await.expect("service call succeeds");
     assert_eq!(res.status(), StatusCode::OK);
 
-    assert_eq!(body_string(res.into_body()).await, "42");
+    assert_eq!(common::body_string(res.into_body()).await, "42");
 }
 
 #[tokio::test]
@@ -277,7 +253,7 @@ async fn get_no_value() {
         .expect("request builds successfully");
     let res = app.oneshot(req).await.expect("service call succeeds");
 
-    assert_eq!(body_string(res.into_body()).await, "None");
+    assert_eq!(common::body_string(res.into_body()).await, "None");
 }
 
 #[tokio::test]
@@ -293,11 +269,11 @@ async fn remove_last_value() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let mut session_cookie = get_session_cookie(res.headers());
+    let mut session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     let req = Request::builder()
         .uri("/remove_value")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app
@@ -305,16 +281,16 @@ async fn remove_last_value() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    session_cookie = get_session_cookie(res.headers());
+    session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     let req = Request::builder()
         .uri("/get_value")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app.oneshot(req).await.expect("service call succeeds");
 
-    assert_eq!(body_string(res.into_body()).await, "None");
+    assert_eq!(common::body_string(res.into_body()).await, "None");
 }
 
 #[tokio::test]
@@ -330,11 +306,14 @@ async fn cycle_session_id() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let first_session_cookie = get_session_cookie(res.headers());
+    let first_session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     let req = Request::builder()
         .uri("/cycle_id")
-        .header(header::COOKIE, cookie_header_value(&first_session_cookie))
+        .header(
+            header::COOKIE,
+            common::cookie_header_value(&first_session_cookie),
+        )
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app
@@ -342,17 +321,20 @@ async fn cycle_session_id() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let second_session_cookie = get_session_cookie(res.headers());
+    let second_session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     let req = Request::builder()
         .uri("/get")
-        .header(header::COOKIE, cookie_header_value(&second_session_cookie))
+        .header(
+            header::COOKIE,
+            common::cookie_header_value(&second_session_cookie),
+        )
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app.oneshot(req).await.expect("service call succeeds");
 
     assert_ne!(first_session_cookie.value(), second_session_cookie.value());
-    assert_eq!(body_string(res.into_body()).await, "42");
+    assert_eq!(common::body_string(res.into_body()).await, "42");
 }
 
 #[tokio::test]
@@ -368,16 +350,16 @@ async fn flush_session() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     let req = Request::builder()
         .uri("/flush")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app.oneshot(req).await.expect("service call succeeds");
 
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     assert_eq!(session_cookie.value(), "");
     assert_eq!(session_cookie.max_age(), Some(Duration::ZERO));
@@ -397,16 +379,16 @@ async fn flush_with_domain() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     let req = Request::builder()
         .uri("/flush")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app.oneshot(req).await.expect("service call succeeds");
 
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     assert_eq!(session_cookie.value(), "");
     assert_eq!(session_cookie.max_age(), Some(Duration::ZERO));
@@ -427,7 +409,7 @@ async fn set_expiry() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     assert_duration_close(
         session_cookie
@@ -438,12 +420,12 @@ async fn set_expiry() {
 
     let req = Request::builder()
         .uri("/set_expiry")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app.oneshot(req).await.expect("service call succeeds");
 
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     assert_duration_close(
         session_cookie
@@ -466,13 +448,13 @@ async fn change_expiry_type() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     assert_eq!(session_cookie.max_age(), None);
 
     let req = Request::builder()
         .uri("/set_expiry")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app_router
@@ -480,7 +462,7 @@ async fn change_expiry_type() {
         .await
         .expect("service call succeeds");
 
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
     assert_duration_close(
         session_cookie
             .max_age()
@@ -499,7 +481,7 @@ async fn change_expiry_type() {
         .oneshot(req)
         .await
         .expect("service call succeeds");
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
 
     assert_duration_close(
         session_cookie
@@ -510,11 +492,11 @@ async fn change_expiry_type() {
 
     let req = Request::builder()
         .uri("/remove_expiry")
-        .header(header::COOKIE, cookie_header_value(&session_cookie))
+        .header(header::COOKIE, common::cookie_header_value(&session_cookie))
         .body(Body::empty())
         .expect("request builds successfully");
     let res = app2.oneshot(req).await.expect("service call succeeds");
 
-    let session_cookie = get_session_cookie(res.headers());
+    let session_cookie = common::get_session_cookie_from_headers(res.headers());
     assert_eq!(session_cookie.max_age(), None);
 }
