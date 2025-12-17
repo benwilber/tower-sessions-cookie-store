@@ -30,12 +30,12 @@ impl CookieController for PlaintextCookie {
 #[cfg(feature = "signed")]
 #[derive(Debug, Clone)]
 pub struct SignedCookie {
-    key: tower_cookies::Key,
+    key: crate::Key,
 }
 
 #[cfg(feature = "signed")]
 impl SignedCookie {
-    pub fn new(key: tower_cookies::Key) -> Self {
+    pub fn new(key: crate::Key) -> Self {
         Self { key }
     }
 }
@@ -58,12 +58,12 @@ impl CookieController for SignedCookie {
 #[cfg(feature = "private")]
 #[derive(Debug, Clone)]
 pub struct PrivateCookie {
-    key: tower_cookies::Key,
+    key: crate::Key,
 }
 
 #[cfg(feature = "private")]
 impl PrivateCookie {
-    pub fn new(key: tower_cookies::Key) -> Self {
+    pub fn new(key: crate::Key) -> Self {
         Self { key }
     }
 }

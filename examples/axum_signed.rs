@@ -1,9 +1,7 @@
 use std::net::SocketAddr;
 
 use axum::{Router, routing::get};
-use tower_cookies::Key;
-use tower_sessions::Session;
-use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer};
+use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer, Key, Session};
 
 async fn index(session: Session) -> String {
     let n: usize = session

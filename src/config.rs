@@ -1,8 +1,9 @@
 use std::borrow::Cow;
 
 use time::{Duration, OffsetDateTime};
-use tower_cookies::{Cookie, cookie::SameSite};
-use tower_sessions_core::session::Expiry;
+use tower_cookies::Cookie;
+
+use crate::{Expiry, SameSite};
 
 #[derive(Debug, Clone)]
 pub struct CookieSessionConfig {

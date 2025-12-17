@@ -9,6 +9,12 @@ mod controller;
 pub mod layer;
 mod store;
 
+pub use tower_cookies::cookie::SameSite;
+pub use tower_sessions_core::{Session, session::Expiry};
+
+#[cfg(any(feature = "signed", feature = "private"))]
+pub use tower_cookies::Key;
+
 pub use crate::config::CookieSessionConfig;
 pub use crate::controller::CookieController;
 pub use crate::layer::CookieSessionManagerLayer;
@@ -26,12 +32,12 @@ pub use crate::controller::PlaintextCookie;
 mod tests {
     use std::convert::Infallible;
 
+    use crate::{Expiry, Key, SameSite, Session};
     use axum::body::Body;
     use http::{Request, Response};
     use tower::{ServiceBuilder, ServiceExt as _};
-    use tower_cookies::cookie::SameSite;
     use tower_service::Service as _;
-    use tower_sessions::{Expiry, Session, SessionManagerLayer};
+    use tower_sessions::SessionManagerLayer;
 
     use crate::{CookieSessionConfig, CookieSessionManagerLayer};
 
@@ -446,7 +452,7 @@ mod tests {
         #[cfg(feature = "signed")]
         #[tokio::test]
         async fn signed_test() {
-            use tower_cookies::Key;
+            use crate::Key;
 
             let key = Key::generate();
             let session_store = MemoryStore::default();
@@ -466,7 +472,7 @@ mod tests {
         #[cfg(feature = "private")]
         #[tokio::test]
         async fn private_test() {
-            use tower_cookies::Key;
+            use crate::Key;
 
             let key = Key::generate();
             let session_store = MemoryStore::default();
@@ -543,11 +549,8 @@ mod tests {
 
         use super::*;
 
-        fn make_layer() -> (
-            tower_cookies::Key,
-            CookieSessionManagerLayer<crate::SignedCookie>,
-        ) {
-            let key = tower_cookies::Key::generate();
+        fn make_layer() -> (crate::Key, CookieSessionManagerLayer<crate::SignedCookie>) {
+            let key = crate::Key::generate();
             let layer = CookieSessionManagerLayer::signed(key.clone());
             (key, layer)
         }
@@ -944,7 +947,7 @@ mod tests {
         #[cfg(feature = "signed")]
         #[tokio::test]
         async fn signed_test() {
-            use tower_cookies::Key;
+            use crate::Key;
 
             let key = Key::generate();
             let session_layer = CookieSessionManagerLayer::signed(key);
@@ -963,7 +966,7 @@ mod tests {
         #[cfg(feature = "private")]
         #[tokio::test]
         async fn private_test() {
-            use tower_cookies::Key;
+            use crate::Key;
 
             let key = Key::generate();
             let session_layer = CookieSessionManagerLayer::private(key);
@@ -1025,7 +1028,7 @@ mod tests {
                 .to_string()
         }
 
-        fn get_unsigned_cookie_value(res: &Response<Body>, key: &tower_cookies::Key) -> String {
+        fn get_unsigned_cookie_value(res: &Response<Body>, key: &Key) -> String {
             let set_cookie = res
                 .headers()
                 .get(http::header::SET_COOKIE)
@@ -1045,12 +1048,12 @@ mod tests {
                 .to_string()
         }
 
-        fn get_session_id(res: &Response<Body>, key: &tower_cookies::Key) -> String {
+        fn get_session_id(res: &Response<Body>, key: &Key) -> String {
             let record = get_record(res, key);
             record.id.to_string()
         }
 
-        fn get_record(res: &Response<Body>, key: &tower_cookies::Key) -> Record {
+        fn get_record(res: &Response<Body>, key: &Key) -> Record {
             let cookie_value = get_unsigned_cookie_value(res, key);
             crate::codec::decode_record(&cookie_value).expect("cookie record decodes successfully")
         }
@@ -1062,10 +1065,12 @@ mod tests {
         use http_body_util::BodyExt as _;
         use time::{Duration, OffsetDateTime};
         use tower::ServiceExt as _;
-        use tower_cookies::{Cookie, cookie::SameSite};
-        use tower_sessions::{Expiry, Session, SessionManagerLayer, SessionStore};
+        use tower_cookies::Cookie;
+        use tower_sessions::{SessionManagerLayer, SessionStore};
 
-        use crate::{CookieSessionConfig, CookieSessionManagerLayer};
+        use crate::{
+            CookieSessionConfig, CookieSessionManagerLayer, Expiry, Key, SameSite, Session,
+        };
 
         fn routes() -> Router {
             Router::new()
@@ -1600,7 +1605,7 @@ mod tests {
                 if let Some(domain) = domain {
                     config = config.with_domain(domain);
                 }
-                let key = tower_cookies::Key::generate();
+                let key = Key::generate();
                 let session_manager = CookieSessionManagerLayer::signed(key).with_config(config);
                 routes().layer(session_manager)
             }

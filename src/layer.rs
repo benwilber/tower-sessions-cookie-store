@@ -22,7 +22,7 @@ pub struct CookieSessionManagerLayer<C: CookieController> {
 #[cfg(feature = "signed")]
 impl CookieSessionManagerLayer<crate::SignedCookie> {
     #[must_use]
-    pub fn signed(key: tower_cookies::Key) -> Self {
+    pub fn signed(key: crate::Key) -> Self {
         Self {
             config: CookieSessionConfig::default(),
             controller: crate::SignedCookie::new(key),
@@ -33,7 +33,7 @@ impl CookieSessionManagerLayer<crate::SignedCookie> {
 #[cfg(feature = "private")]
 impl CookieSessionManagerLayer<crate::PrivateCookie> {
     #[must_use]
-    pub fn private(key: tower_cookies::Key) -> Self {
+    pub fn private(key: crate::Key) -> Self {
         Self {
             config: CookieSessionConfig::default(),
             controller: crate::PrivateCookie::new(key),

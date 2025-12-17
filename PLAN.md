@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build a session “store” that keeps the entire session record (ID, expiry, key/value data) inside an HTTP cookie, optionally **signed** (integrity) and/or **encrypted** (confidentiality), while keeping the handler-facing API the same (`tower_sessions::Session`).
+Build a session “store” that keeps the entire session record (ID, expiry, key/value data) inside an HTTP cookie, optionally **signed** (integrity) and/or **encrypted** (confidentiality), while keeping the handler-facing API the same (`tower_sessions_cookie_store::Session`).
 
 ## Development approach (test-first)
 
@@ -18,7 +18,7 @@ We will develop this crate by first establishing a baseline of behavior using `t
 
 ## Key Constraint (Drivable Design Decision)
 
-`tower_sessions_core::SessionStore` has no access to the request/response cookie jar, so a “cookie store” cannot be implemented as a standalone `SessionStore` that you plug into `tower_sessions::SessionManagerLayer`.
+`tower_sessions_core::SessionStore` has no access to the request/response cookie jar, so a “cookie store” cannot be implemented as a standalone `SessionStore` that you plug into `tower_sessions::SessionManagerLayer` (from the `tower-sessions` crate).
 
 To persist session data into cookies, we will implement a **new middleware layer/service** (similar to `SessionManagerLayer`) that:
 
@@ -48,7 +48,7 @@ This keeps compatibility with `Session` as an extension/extractor, but requires 
 ## Architecture
 
 ### Public API (proposed)
-- `CookieSessionManagerLayer<C = PlaintextCookie>`: a `tower::Layer` that provides `tower_sessions::Session` via request extensions/extractors, persisted to a cookie.
+- `CookieSessionManagerLayer<C = PlaintextCookie>`: a `tower::Layer` that provides `tower_sessions_cookie_store::Session` via request extensions/extractors, persisted to a cookie.
   - Wraps `tower_cookies::CookieManager` internally so applications don’t have to add it separately.
   - Reads and writes *one cookie* (by default) whose value encodes the full session record.
 - `CookieSessionConfig`: cookie attribute configuration + session semantics.
@@ -56,9 +56,9 @@ This keeps compatibility with `Session` as an extension/extractor, but requires 
   - Session semantics: `expiry`, `always_save`.
   - Limits/policy: `max_cookie_bytes` (and optionally a “clear on decode error” toggle).
 - Cookie controllers (same conceptual naming as `tower-sessions` uses internally):
-  - `PlaintextCookie`: stores the cookie value as-is.
-  - `SignedCookie { key: tower_cookies::Key }`: tamper-evident cookie value (feature-gated).
-  - `PrivateCookie { key: tower_cookies::Key }`: encrypted + authenticated cookie value (feature-gated).
+- `PlaintextCookie`: stores the cookie value as-is.
+- `SignedCookie { key: tower_sessions_cookie_store::Key }`: tamper-evident cookie value (feature-gated).
+- `PrivateCookie { key: tower_sessions_cookie_store::Key }`: encrypted + authenticated cookie value (feature-gated).
 - `CookieController` (trait): abstracts “get/add/remove cookie by name” over `tower_cookies::Cookies` and signed/private jars.
 - `CookieStore` (internal): a per-request `tower_sessions_core::SessionStore` implementation that performs cookie I/O.
   - `load(id)`: returns the decoded record (if present, valid, and unexpired).
@@ -75,7 +75,7 @@ This keeps compatibility with `Session` as an extension/extractor, but requires 
 
 ### Planned type documentation (Rustdoc-style summaries)
 - `CookieSessionManagerLayer<C>`
-  - “A Tower layer that stores `tower_sessions::Session` state in an HTTP cookie.”
+  - “A Tower layer that stores `tower_sessions_cookie_store::Session` state in an HTTP cookie.”
   - “Inserts `Session` into request extensions so `Session` can be used as an Axum extractor.”
   - “Persists changes after the inner service returns (mirrors `tower_sessions::SessionManagerLayer` behavior).”
 - `CookieSessionConfig`
@@ -84,7 +84,7 @@ This keeps compatibility with `Session` as an extension/extractor, but requires 
   - “`max_cookie_bytes` prevents oversized cookie writes.”
 - `PlaintextCookie` / `SignedCookie` / `PrivateCookie`
   - “Selects how the cookie value is stored (plaintext / signed / encrypted).”
-  - “`SignedCookie` and `PrivateCookie` use `tower_cookies::Key`.”
+  - “`SignedCookie` and `PrivateCookie` use `tower_sessions_cookie_store::Key`.”
 - `codec` module
   - “Encodes/decodes a versioned `tower_sessions_core::session::Record` to/from a cookie-safe string.”
   - “Decode validates expiry and returns `None` for expired records (treated as no session).”
@@ -128,8 +128,7 @@ Signing/encryption:
 ### Plaintext cookie sessions (dev/testing only)
 ```rust
 use axum::{routing::get, Router};
-use tower_sessions::Session;
-use tower_sessions_cookie_store::CookieSessionManagerLayer;
+use tower_sessions_cookie_store::{CookieSessionManagerLayer, Session};
 
 async fn handler(session: Session) -> String {
     let n: usize = session.get("n").await.unwrap().unwrap_or(0);
@@ -145,8 +144,7 @@ let app = Router::new()
 ### Signed cookies (tamper-evident, readable by the client)
 ```rust
 use axum::{routing::get, Router};
-use tower_cookies::Key;
-use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer, SignedCookie};
+use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer, Key, SignedCookie};
 
 let key = Key::generate();
 
@@ -160,8 +158,7 @@ let app = Router::new().route("/", get(|| async { "ok" })).layer(layer);
 ### Private cookies (encrypted + authenticated)
 ```rust
 use axum::{routing::get, Router};
-use tower_cookies::Key;
-use tower_sessions_cookie_store::{CookieSessionManagerLayer, PrivateCookie};
+use tower_sessions_cookie_store::{CookieSessionManagerLayer, Key, PrivateCookie};
 
 let key = Key::generate();
 let app = Router::new()
@@ -170,7 +167,7 @@ let app = Router::new()
 ```
 
 ### Notes for Axum extractors
-- No new extractor should be required: `tower_sessions::Session` already extracts from request extensions.
+- No new extractor should be required: `tower_sessions_cookie_store::Session` already extracts from request extensions.
 - If we add any new extractors, they should be purely ergonomic (e.g. a typed wrapper) and should delegate to `Session` internally.
 
 ## Security and Correctness Considerations
