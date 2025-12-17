@@ -10,6 +10,25 @@
 //! resistance** and should only be used for **testing and debugging**. Never enable or use this in
 //! a real application: a client can trivially edit the cookie to escalate privileges and
 //! impersonate other users (including staff/admin).
+//!
+//! ## Example (Axum, signed cookies)
+//!
+//! ```rust
+//! use axum::{routing::get, Router};
+//! use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer, Key, Session};
+//!
+//! async fn handler(session: Session) -> String {
+//!     let n: usize = session.get("n").await.expect("session get succeeds").unwrap_or(0);
+//!     session.insert("n", n + 1).await.expect("session insert succeeds");
+//!     format!("n={n}")
+//! }
+//!
+//! let key = Key::generate();
+//! let config = CookieSessionConfig::default().with_secure(false);
+//! let app = Router::<()>::new()
+//!     .route("/", get(handler))
+//!     .layer(CookieSessionManagerLayer::signed(key).with_config(config));
+//! ```
 
 mod codec;
 mod config;
