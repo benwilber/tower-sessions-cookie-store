@@ -28,6 +28,8 @@ async fn main() {
     let listener = tokio::net::TcpListener::bind(addr)
         .await
         .expect("tcp listener binds successfully");
+    let local_addr = listener.local_addr().expect("local address is available");
+    println!("listening at http://{local_addr}");
 
     axum::serve(listener, app)
         .await
