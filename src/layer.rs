@@ -130,6 +130,10 @@ where
             let cookies = match req.extensions().get::<tower_cookies::Cookies>().cloned() {
                 Some(cookies) => cookies,
                 None => {
+                    tracing::error!(
+                        cookie_name = %config.name,
+                        "cookie session layer missing Cookies extension (is CookieManager enabled?)"
+                    );
                     let mut res = Response::default();
                     *res.status_mut() = http::StatusCode::INTERNAL_SERVER_ERROR;
                     return Ok(res);
@@ -211,7 +215,11 @@ where
                 }
                 && let Err(err) = session.save().await
             {
-                tracing::error!(err = %err, "cookie session save failed");
+                tracing::error!(
+                    err = %err,
+                    cookie_name = %config.name,
+                    "cookie session save failed"
+                );
                 let mut res = Response::default();
                 *res.status_mut() = http::StatusCode::INTERNAL_SERVER_ERROR;
                 return Ok(res);
