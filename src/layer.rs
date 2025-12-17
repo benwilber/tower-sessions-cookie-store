@@ -145,6 +145,9 @@ where
             let mut initial_cookie_removed = false;
 
             if session_cookie.is_none() && raw_cookie_present && config.clear_on_decode_error {
+                // A cookie is present on the request, but we couldn't decode/verify/decrypt it
+                // (e.g. signature mismatch, wrong key, ciphertext tampering). When configured,
+                // actively clear it so the client doesn't keep sending a broken cookie forever.
                 let mut cookie = tower_cookies::Cookie::new(config.name.clone(), "");
                 config.apply_removal_attributes(&mut cookie);
                 controller.remove(&cookies, cookie);
@@ -157,6 +160,9 @@ where
                         Some(record)
                     }
                     Ok(_expired) => {
+                        // We can decode the cookie, but the embedded session record is expired.
+                        // Optionally clear it to avoid the client continually presenting an
+                        // already-expired session cookie.
                         if config.clear_on_decode_error
                             && let Some(mut cookie) = session_cookie.clone()
                         {
@@ -168,6 +174,9 @@ where
                     }
                     Err(err) => {
                         tracing::warn!(err = %err, "cookie session decode failed");
+                        // The cookie value parsed successfully, but the session payload doesn't
+                        // decode (malformed base64/json, unsupported version, etc). Optionally
+                        // clear it to recover on the next request with a fresh session.
                         if config.clear_on_decode_error
                             && let Some(mut cookie) = session_cookie.clone()
                         {
@@ -200,6 +209,9 @@ where
             let had_cookie = session_cookie.is_some();
 
             if empty {
+                // When the session becomes empty (e.g. `session.flush()`), remove the cookie so
+                // the client stops sending it. This mirrors the behavior of cookie-based session
+                // backends that treat an empty session as "no session".
                 if had_cookie && !cookie_store.did_remove_cookie() {
                     cookie_store.remove_cookie();
                 }
