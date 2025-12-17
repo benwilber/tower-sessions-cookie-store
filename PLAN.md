@@ -48,7 +48,7 @@ This keeps compatibility with `Session` as an extension/extractor, but requires 
 ## Architecture
 
 ### Public API (proposed)
-- `CookieSessionManagerLayer<C = PlaintextCookie>`: a `tower::Layer` that provides `tower_sessions_cookie_store::Session` via request extensions/extractors, persisted to a cookie.
+- `CookieSessionManagerLayer<C = DangerousPlaintextCookie>`: a `tower::Layer` that provides `tower_sessions_cookie_store::Session` via request extensions/extractors, persisted to a cookie.
   - Wraps `tower_cookies::CookieManager` internally so applications don’t have to add it separately.
   - Reads and writes *one cookie* (by default) whose value encodes the full session record.
 - `CookieSessionConfig`: cookie attribute configuration + session semantics.
@@ -56,7 +56,7 @@ This keeps compatibility with `Session` as an extension/extractor, but requires 
   - Session semantics: `expiry`, `always_save`.
   - Limits/policy: `max_cookie_bytes` (and optionally a “clear on decode error” toggle).
 - Cookie controllers (same conceptual naming as `tower-sessions` uses internally):
-- `PlaintextCookie`: stores the cookie value as-is.
+- `DangerousPlaintextCookie`: stores the cookie value as-is (plaintext; no tamper resistance).
 - `SignedCookie { key: tower_sessions_cookie_store::Key }`: tamper-evident cookie value (feature-gated).
 - `PrivateCookie { key: tower_sessions_cookie_store::Key }`: encrypted + authenticated cookie value (feature-gated).
 - `CookieController` (trait): abstracts “get/add/remove cookie by name” over `tower_cookies::Cookies` and signed/private jars.
@@ -68,7 +68,7 @@ This keeps compatibility with `Session` as an extension/extractor, but requires 
 
 ### Planned crate layout (modules)
 - `config`: `CookieSessionConfig` + builder-style `with_*` methods.
-- `controller`: `CookieController`, `PlaintextCookie`, `SignedCookie`, `PrivateCookie`.
+- `controller`: `CookieController`, `DangerousPlaintextCookie`, `SignedCookie`, `PrivateCookie`.
 - `codec`: `encode_record` / `decode_record` (versioned payload).
 - `layer` / `service`: `CookieSessionManagerLayer` and the `Service` implementation.
 - `error`: decode/encode/size errors mapped into `tower_sessions_core::session_store::Error`.
@@ -82,8 +82,11 @@ This keeps compatibility with `Session` as an extension/extractor, but requires 
   - “Cookie attributes + session persistence behavior.”
   - “Defaults are conservative (`Secure`, `HttpOnly`, `SameSite::Strict`, path `/`).”
   - “`max_cookie_bytes` prevents oversized cookie writes.”
-- `PlaintextCookie` / `SignedCookie` / `PrivateCookie`
+- `DangerousPlaintextCookie` / `SignedCookie` / `PrivateCookie`
   - “Selects how the cookie value is stored (plaintext / signed / encrypted).”
+  - Security: plaintext offers no tamper resistance and must never be used in a real application
+    (only for testing/debugging), since a client can trivially edit the cookie to escalate
+    privileges and impersonate other users (including staff/admin).
   - “`SignedCookie` and `PrivateCookie` use `tower_sessions_cookie_store::Key`.”
 - `codec` module
   - “Encodes/decodes a versioned `tower_sessions_core::session::Record` to/from a cookie-safe string.”

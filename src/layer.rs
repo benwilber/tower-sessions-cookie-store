@@ -42,12 +42,18 @@ impl CookieSessionManagerLayer<crate::PrivateCookie> {
 }
 
 #[cfg(feature = "dangerous-plaintext")]
-impl CookieSessionManagerLayer<crate::PlaintextCookie> {
+impl CookieSessionManagerLayer<crate::DangerousPlaintextCookie> {
     #[must_use]
-    pub fn new() -> Self {
+    /// Creates a cookie session manager that stores the session record as plaintext.
+    ///
+    /// # Security warning
+    /// This offers **no tamper resistance** and should only be used for **testing and debugging**.
+    /// Never enable or use this in a real application: a client can trivially edit the cookie to
+    /// escalate privileges and impersonate other users (including staff/admin).
+    pub fn dangerous_plaintext() -> Self {
         Self {
             config: CookieSessionConfig::default(),
-            controller: crate::PlaintextCookie,
+            controller: crate::DangerousPlaintextCookie,
         }
     }
 }
@@ -72,9 +78,9 @@ impl<C: CookieController> CookieSessionManagerLayer<C> {
 }
 
 #[cfg(feature = "dangerous-plaintext")]
-impl Default for CookieSessionManagerLayer<crate::PlaintextCookie> {
+impl Default for CookieSessionManagerLayer<crate::DangerousPlaintextCookie> {
     fn default() -> Self {
-        Self::new()
+        Self::dangerous_plaintext()
     }
 }
 

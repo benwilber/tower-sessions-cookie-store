@@ -2,6 +2,14 @@
 //!
 //! This crate provides a layer that inserts `tower_sessions_core::Session` into request
 //! extensions and persists the session record into a cookie.
+//!
+//! # Security
+//! The default and recommended format is a signed cookie (`signed` feature).
+//!
+//! The `dangerous-plaintext` feature enables a plaintext cookie controller. This offers **no tamper
+//! resistance** and should only be used for **testing and debugging**. Never enable or use this in
+//! a real application: a client can trivially edit the cookie to escalate privileges and
+//! impersonate other users (including staff/admin).
 
 mod codec;
 mod config;
@@ -26,7 +34,7 @@ pub use crate::controller::SignedCookie;
 pub use crate::controller::PrivateCookie;
 
 #[cfg(feature = "dangerous-plaintext")]
-pub use crate::controller::PlaintextCookie;
+pub use crate::controller::DangerousPlaintextCookie;
 
 #[cfg(test)]
 mod tests {

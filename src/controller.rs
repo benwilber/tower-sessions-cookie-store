@@ -10,10 +10,16 @@ pub trait CookieController: Debug + Clone + Send + Sync + 'static {
 
 #[cfg(feature = "dangerous-plaintext")]
 #[derive(Debug, Clone, Copy, Default)]
-pub struct PlaintextCookie;
+/// A controller that stores session state in plaintext cookies.
+///
+/// # Security warning
+/// This offers **no tamper resistance** and should only be used for **testing and debugging**.
+/// Never enable or use this in a real application: a client can trivially edit the cookie to
+/// escalate privileges and impersonate other users (including staff/admin).
+pub struct DangerousPlaintextCookie;
 
 #[cfg(feature = "dangerous-plaintext")]
-impl CookieController for PlaintextCookie {
+impl CookieController for DangerousPlaintextCookie {
     fn get(&self, cookies: &Cookies, name: &str) -> Option<Cookie<'static>> {
         cookies.get(name).map(Cookie::into_owned)
     }
