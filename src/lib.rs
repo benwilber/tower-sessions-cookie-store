@@ -10,7 +10,7 @@ pub mod layer;
 mod store;
 
 pub use tower_cookies::cookie::SameSite;
-pub use tower_sessions_core::{Session, session::Expiry};
+pub use tower_sessions_core::{Session, session::Expiry, session_store};
 
 #[cfg(any(feature = "signed", feature = "private"))]
 pub use tower_cookies::Key;
