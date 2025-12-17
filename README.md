@@ -2,10 +2,8 @@
 
 Cookie-backed session persistence for [`tower-sessions`](https://crates.io/crates/tower-sessions).
 
-This crate provides `CookieSessionManagerLayer`, a Tower layer that stores the full
-`tower_sessions_core::session::Record` (ID, expiry, and key/value data) inside a single HTTP
-cookie. It integrates with `tower-sessions` by inserting a `tower_sessions_cookie_store::Session`
-into request extensions (and works with Axum extractors).
+This crate provides `CookieSessionManagerLayer`, a Tower layer for cookie-backed sessions. It
+integrates with `tower-sessions` and works with Axum extractors.
 
 ## Features
 
@@ -109,4 +107,3 @@ This crate re-exports commonly used types to avoid requiring direct dependency a
 ## License
 
 MIT. See `LICENSE`.
-
