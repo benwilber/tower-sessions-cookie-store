@@ -218,15 +218,21 @@ where
                 return Ok(res);
             }
 
-            if (modified || config.always_save)
-                && !res.status().is_server_error()
-                && !cookie_store.did_write_cookie()
-                && {
-                    cookie_store.set_expiry_hint(session.expiry());
-                    true
-                }
-                && let Err(err) = session.save().await
-            {
+            if !modified && !config.always_save {
+                return Ok(res);
+            }
+
+            if res.status().is_server_error() {
+                return Ok(res);
+            }
+
+            if cookie_store.did_write_cookie() {
+                return Ok(res);
+            }
+
+            cookie_store.set_expiry_hint(session.expiry());
+
+            if let Err(err) = session.save().await {
                 tracing::error!(
                     err = %err,
                     cookie_name = %config.name,
