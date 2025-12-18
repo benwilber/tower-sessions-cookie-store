@@ -1,9 +1,15 @@
 [package]
 name = "tower-sessions-cookie-store"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2024"
 license = "MIT"
 readme = "README.md"
+description = "Cookie-backed session store for tower-sessions (signed/private cookies via tower-cookies)"
+repository = "https://github.com/benwilber/tower-sessions-cookie-store"
+homepage = "https://github.com/benwilber/tower-sessions-cookie-store"
+documentation = "https://docs.rs/tower-sessions-cookie-store"
+keywords = ["tower", "axum", "session", "cookie", "middleware"]
+categories = ["web-programming", "web-programming::http-server", "authentication"]
 
 [dependencies]
 async-trait = "0.1.89"
