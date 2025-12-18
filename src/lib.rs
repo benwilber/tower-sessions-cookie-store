@@ -30,6 +30,12 @@
 //!     .layer(CookieSessionManagerLayer::signed(key).with_config(config));
 //! ```
 
+#[cfg(all(
+    feature = "key-expansion",
+    not(any(feature = "signed", feature = "private"))
+))]
+compile_error!("feature `key-expansion` requires `signed` and/or `private`.");
+
 mod codec;
 mod config;
 mod controller;

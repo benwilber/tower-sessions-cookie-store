@@ -919,6 +919,7 @@ dependencies = [
  "async-trait",
  "axum",
  "base64",
+ "cookie",
  "http",
  "http-body-util",
  "serde",
