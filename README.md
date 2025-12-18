@@ -15,6 +15,8 @@ integrates with `tower-sessions` and works with Axum extractors.
 
 ## Usage (Axum)
 
+For more usage examples, see the [`examples/`](examples/) directory.
+
 ### Signed cookies (default)
 
 ```rust
