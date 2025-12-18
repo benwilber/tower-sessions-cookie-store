@@ -8,7 +8,7 @@ use axum::{Router, body::Body, routing::get};
 use http::{Request, StatusCode, header};
 use time::{Duration, OffsetDateTime};
 use tower::ServiceExt as _;
-use tower_cookies::Cookie;
+use tower_cookies::{Cookie, cookie::CookieJar};
 use tower_sessions_cookie_store::{
     CookieSessionConfig, CookieSessionManagerLayer, Expiry, Key, SameSite, Session,
 };
@@ -189,6 +189,69 @@ async fn malformed_session_cookie() {
     let session_cookie = common::get_session_cookie_from_headers(res.headers());
     assert_ne!(session_cookie.value(), "malformed");
     assert_eq!(res.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn clears_bad_cookie_when_configured() {
+    // Exercise: a signed cookie with a value that fails decoding, with `clear_on_decode_error = true`.
+    // Expectation: the layer emits a removal cookie.
+    let key = Key::generate();
+    let config = CookieSessionConfig::default()
+        .with_secure(true)
+        .with_clear_on_decode_error(true);
+    let session_manager = CookieSessionManagerLayer::signed(key.clone()).with_config(config);
+    let app = routes().layer(session_manager);
+
+    let mut jar = CookieJar::new();
+    jar.signed_mut(&key)
+        .add(Cookie::new("session", "malformed"));
+    let cookie = jar
+        .get("session")
+        .expect("jar contains signed cookie")
+        .clone();
+
+    let req = Request::builder()
+        .uri("/")
+        .header(header::COOKIE, common::cookie_header_value(&cookie))
+        .body(Body::empty())
+        .expect("request builds successfully");
+    let res = app.oneshot(req).await.expect("service call succeeds");
+
+    let removal_cookie = common::get_session_cookie_from_headers(res.headers());
+    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(removal_cookie.value(), "");
+    assert_eq!(removal_cookie.max_age(), Some(Duration::ZERO));
+}
+
+#[tokio::test]
+async fn retains_bad_cookie_when_not_clearing() {
+    // Exercise: a signed cookie with a value that fails decoding, with `clear_on_decode_error = false`.
+    // Expectation: the layer leaves it alone (no Set-Cookie).
+    let config = CookieSessionConfig::default()
+        .with_secure(true)
+        .with_clear_on_decode_error(false);
+    let key = Key::generate();
+    let session_manager = CookieSessionManagerLayer::signed(key).with_config(config);
+    let app = routes().layer(session_manager);
+
+    let req = Request::builder()
+        .uri("/")
+        .header(
+            header::COOKIE,
+            common::cookie_header_value(&Cookie::new("session", "bogus")),
+        )
+        .body(Body::empty())
+        .expect("request builds successfully");
+    let res = app.oneshot(req).await.expect("service call succeeds");
+
+    assert_eq!(res.status(), StatusCode::OK);
+    assert!(
+        res.headers()
+            .get_all(header::SET_COOKIE)
+            .iter()
+            .next()
+            .is_none()
+    );
 }
 
 #[tokio::test]
