@@ -69,9 +69,20 @@ envelope. The format is an implementation detail and may change between releases
 For testing/debugging, the crate exposes `tower_sessions_cookie_store::{encode_record,
 decode_record}`.
 
+## Benefits of cookie-backed session storage
+
+- Stateless: no server-side session store to operate.
+- No per-request database/network I/O to load session state.
+- No backend database/table/indexes/migrations needed for session storage.
+
 ## Security notes
 
 - Cookie sessions are bearer tokens. If a cookie is stolen, it can be replayed until it expires.
+- Unlike server-side session stores (e.g. Redis), cookie-backed sessions have no server-side state
+  to revoke. Any previously issued cookie remains valid until it expires, even if the application
+  later rotates the session ID, updates session data, or "logs out" the user by clearing the cookie
+  (the client will stop sending it, but an attacker holding a copy can still replay it until
+  expiry).
 - The `dangerous-plaintext` feature offers **no tamper resistance**. A client can trivially edit
   the cookie to escalate privileges and impersonate other users (including staff/admin). Do not
   enable or use it in real applications.
