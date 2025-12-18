@@ -8,6 +8,12 @@ Cookie-backed session persistence for [`tower-sessions`](https://crates.io/crate
 This crate provides `CookieSessionManagerLayer`, a Tower layer for cookie-backed sessions. It
 integrates with `tower-sessions` and works with Axum extractors.
 
+## Install
+
+```bash
+cargo add tower-sessions-cookie-store
+```
+
 ## Features
 
 - `signed` (default): integrity-protected cookies (tamper-evident). Cookie contents are readable by
