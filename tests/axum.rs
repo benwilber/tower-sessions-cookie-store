@@ -80,6 +80,16 @@ fn routes() -> Router {
             }),
         )
         .route(
+            "/insert_large",
+            get(|session: Session| async move {
+                let large_value = "x".repeat(5_000);
+                session
+                    .insert("big", large_value)
+                    .await
+                    .expect("session insert succeeds");
+            }),
+        )
+        .route(
             "/set_expiry",
             get(|session: Session| async move {
                 let expiry = Expiry::AtDateTime(OffsetDateTime::now_utc() + Duration::days(1));
@@ -421,6 +431,32 @@ async fn flush_with_domain() {
     assert_eq!(session_cookie.max_age(), Some(Duration::ZERO));
     assert_eq!(session_cookie.domain(), Some("localhost"));
     assert_eq!(session_cookie.path(), Some("/"));
+}
+
+#[tokio::test]
+async fn oversized_cookie_returns_500_and_no_set_cookie() {
+    // Exercise: write a value that would exceed `max_cookie_bytes`.
+    // Expectation: the layer returns a 500 and does not emit a Set-Cookie header.
+    let config = CookieSessionConfig::default()
+        .with_secure(true)
+        .with_max_cookie_bytes(64);
+    let key = Key::generate();
+    let app = routes().layer(CookieSessionManagerLayer::signed(key).with_config(config));
+
+    let req = Request::builder()
+        .uri("/insert_large")
+        .body(Body::empty())
+        .expect("request builds successfully");
+    let res = app.oneshot(req).await.expect("service call succeeds");
+
+    assert_eq!(res.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    assert!(
+        res.headers()
+            .get_all(header::SET_COOKIE)
+            .iter()
+            .next()
+            .is_none()
+    );
 }
 
 #[tokio::test]
