@@ -61,6 +61,13 @@ let router = Router::new()
 - `max_cookie_bytes` (default: `4096`): maximum encoded cookie value size
 - `clear_on_decode_error` (default: `true`): clears invalid/expired/undecodable cookies
 
+## Behavior notes
+
+- Saves happen after your handler returns. If encoding the cookie fails (e.g., the encoded session
+  exceeds `max_cookie_bytes`), the layer responds with `500` and does not emit `Set-Cookie`.
+- When `clear_on_decode_error` is `true`, a bad/expired/undecodable incoming cookie is actively
+  cleared so the client stops sending it.
+
 ## Cookie format
 
 The cookie value encodes the full session record using a versioned, base64url-encoded JSON
