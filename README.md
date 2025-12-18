@@ -8,11 +8,12 @@ integrates with `tower-sessions` and works with Axum extractors.
 ## Features
 
 - `signed` (default): integrity-protected cookies (tamper-evident). Cookie contents are readable by
-  the client. Provided by [`tower-cookies`](https://crates.io/crates/tower-cookies).
+  the client. Provided by [`cookie`](https://crates.io/crates/cookie).
 - `private`: encrypted + authenticated cookies (confidentiality + integrity). Provided by
-  [`tower-cookies`](https://crates.io/crates/tower-cookies).
+  [`cookie`](https://crates.io/crates/cookie).
 - `key-expansion`: enables `Key::derive_from()` for deriving a cookie `Key` from a 32-byte master
-  key. Requires `signed` and/or `private`.
+  key. Requires `signed` and/or `private`. Provided by
+  [`cookie`](https://crates.io/crates/cookie).
 - `dangerous-plaintext`: plaintext cookies (no integrity, no confidentiality). Intended only for
   testing/debugging.
 
