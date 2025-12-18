@@ -1,5 +1,8 @@
 # tower-sessions-cookie-store
 
+[![crates.io](https://img.shields.io/crates/v/tower-sessions-cookie-store.svg)](https://crates.io/crates/tower-sessions-cookie-store)
+[![docs.rs](https://docs.rs/tower-sessions-cookie-store/badge.svg)](https://docs.rs/tower-sessions-cookie-store)
+
 Cookie-backed session persistence for [`tower-sessions`](https://crates.io/crates/tower-sessions).
 
 This crate provides `CookieSessionManagerLayer`, a Tower layer for cookie-backed sessions. It
