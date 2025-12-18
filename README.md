@@ -96,19 +96,23 @@ decode_record}`.
 
 ## FAQ
 
-- How can I log everyone out at once? Rotate the signing/encryption key. All existing cookies will
-  fail verification and be rejected.
-- How can I revoke one user’s session? You can’t centrally revoke a single cookie-only session.
-  One option: store a version/token on the user record and also in the session; reject the session
-  when they don’t match and force the client to reauthenticate. See the security notes above.
-- Why did I get a 500 when saving a session? The encoded cookie likely exceeded
-  `max_cookie_bytes` (default 4096) or failed to encode/verify; the layer returns 500 and does not
-  set a cookie.
-- Can I store large objects or lots of data? No. Cookies are limited (~4 KB by default). Use a
-  server-side store if you need larger payloads.
-- Can I use this cross-site? Set `SameSite::None` and `secure = true` (required by browsers).
-- Do I need HTTPS in production? Yes; leave `secure = true` so browsers only send the cookie over
-  HTTPS. Only disable it locally for development.
+- How can I log everyone out at once?
+  - Rotate the signing/encryption key. All existing cookies will fail verification and be rejected.
+- How can I revoke one user’s session?
+  - You can’t centrally revoke a single cookie-only session. One option: store a version/token on
+    the user record and also in the session; reject the session when they don’t match and force the
+    client to reauthenticate. See the security notes above.
+- Why did I get a 500 when saving a session?
+  - The encoded cookie likely exceeded `max_cookie_bytes` (default 4096) or failed to
+    encode/verify; the layer returns 500 and does not set a cookie.
+- Can I store large objects or lots of data?
+  - No. Cookies are limited (~4 KB by default). Use a server-side store if you need larger
+    payloads.
+- Can I use this cross-site?
+  - Set `SameSite::None` and `secure = true` (required by browsers).
+- Do I need HTTPS in production?
+  - Yes; leave `secure = true` so browsers only send the cookie over HTTPS. Only disable it locally
+    for development.
 
 ## License
 
