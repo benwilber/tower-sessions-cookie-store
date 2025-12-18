@@ -12,7 +12,7 @@ use tower_sessions_core::{
     session_store,
 };
 
-use crate::{codec, config::CookieSessionConfig, controller::CookieController};
+use crate::{config::CookieSessionConfig, controller::CookieController, format};
 
 #[derive(Debug)]
 pub(crate) struct CookieStore<C: CookieController> {
@@ -84,7 +84,7 @@ impl<C: CookieController> CookieStore<C> {
     }
 
     fn persist_record(&self, record: &Record) -> session_store::Result<()> {
-        let value = codec::encode_record(record)?;
+        let value = format::encode_record(record)?;
         if value.len() > self.config.max_cookie_bytes {
             return Err(session_store::Error::Encode(format!(
                 "Cookie value exceeds max_cookie_bytes ({} > {})",

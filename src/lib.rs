@@ -36,7 +36,6 @@
 ))]
 compile_error!("feature `key-expansion` requires `signed` and/or `private`.");
 
-mod codec;
 mod config;
 mod controller;
 pub mod format;

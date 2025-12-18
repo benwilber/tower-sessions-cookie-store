@@ -17,7 +17,9 @@ use tower_layer::Layer;
 use tower_service::Service;
 use tower_sessions_core::Session;
 
-use crate::{codec, config::CookieSessionConfig, controller::CookieController, store::CookieStore};
+use crate::{
+    config::CookieSessionConfig, controller::CookieController, format, store::CookieStore,
+};
 
 #[derive(Debug, Clone)]
 /// A Tower [`Layer`] that provides cookie-backed sessions.
@@ -172,7 +174,7 @@ where
             }
 
             let decoded_record = match session_cookie.as_ref() {
-                Some(cookie) => match codec::decode_record(cookie.value()) {
+                Some(cookie) => match format::decode_record(cookie.value()) {
                     Ok(record) if record.expiry_date > time::OffsetDateTime::now_utc() => {
                         Some(record)
                     }
