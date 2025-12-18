@@ -24,7 +24,9 @@ use crate::{
 #[derive(Debug, Clone)]
 /// A Tower [`Layer`] that provides cookie-backed sessions.
 ///
-/// This layer wraps [`tower_cookies::CookieManager`] internally.
+/// The layer wraps [`tower_cookies::CookieManager`] and writes the session cookie after your
+/// handler runs. If saving the cookie fails (e.g. oversized payload), the layer returns `500` and
+/// does not emit `Set-Cookie`.
 pub struct CookieSessionManagerLayer<C: CookieController> {
     config: CookieSessionConfig,
     controller: C,

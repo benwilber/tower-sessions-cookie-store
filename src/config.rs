@@ -135,7 +135,8 @@ impl CookieSessionConfig {
     #[must_use]
     /// Sets the maximum encoded cookie value size, in bytes.
     ///
-    /// Default: `4096`.
+    /// Default: `4096`. When the encoded session exceeds this size, `SessionStore::save` returns
+    /// an `Error::Encode` and no cookie is written (the layer will surface this as a `500`).
     pub fn with_max_cookie_bytes(mut self, max_cookie_bytes: usize) -> Self {
         self.max_cookie_bytes = max_cookie_bytes;
         self
@@ -144,7 +145,8 @@ impl CookieSessionConfig {
     #[must_use]
     /// When `true`, clears invalid/expired/undecodable cookies.
     ///
-    /// Default: `true`.
+    /// Default: `true`. This helps clients recover by removing broken cookies instead of sending
+    /// them on every request.
     pub fn with_clear_on_decode_error(mut self, clear_on_decode_error: bool) -> Self {
         self.clear_on_decode_error = clear_on_decode_error;
         self
