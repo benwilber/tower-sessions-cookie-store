@@ -11,6 +11,9 @@ documentation = "https://docs.rs/tower-sessions-cookie-store"
 keywords = ["tower", "axum", "session", "cookie", "middleware"]
 categories = ["web-programming", "web-programming::http-server", "authentication"]
 
+[package.metadata.docs.rs]
+all-features = true
+
 [dependencies]
 async-trait = "0.1.89"
 base64 = "0.22.1"
