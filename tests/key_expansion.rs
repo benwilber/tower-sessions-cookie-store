@@ -1,5 +1,7 @@
 mod common;
 
+// Tests for the `key-expansion` feature, which enables `Key::derive_from()` for deterministic key
+// derivation from a master key.
 use axum::{Router, body::Body, routing::get};
 use http::{Request, header};
 use tower::ServiceExt as _;
@@ -7,6 +9,7 @@ use tower::ServiceExt as _;
 use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer, Key, Session};
 
 fn routes() -> Router {
+    // Routes to write and read a single session key.
     Router::new()
         .route(
             "/set",
@@ -33,6 +36,8 @@ fn routes() -> Router {
 #[cfg(all(feature = "key-expansion", feature = "signed"))]
 #[tokio::test]
 async fn signed_roundtrips_with_derived_key() {
+    // Exercise: derive a `Key` from a 32-byte master key and use it for signed cookies.
+    // Expectation: session data round-trips correctly across requests.
     let master_key = [42u8; 32];
     let key = Key::derive_from(&master_key);
     let config = CookieSessionConfig::default().with_secure(false);
@@ -63,6 +68,8 @@ async fn signed_roundtrips_with_derived_key() {
 #[cfg(all(feature = "key-expansion", feature = "private"))]
 #[tokio::test]
 async fn private_roundtrips_with_derived_key() {
+    // Exercise: derive a `Key` from a 32-byte master key and use it for private cookies.
+    // Expectation: session data round-trips correctly across requests.
     let master_key = [7u8; 32];
     let key = Key::derive_from(&master_key);
     let config = CookieSessionConfig::default().with_secure(false);

@@ -1,5 +1,7 @@
 #![cfg(feature = "signed")]
 
+// Tests for how `CookieSessionConfig` maps to emitted cookie attributes when using the signed
+// cookie backend.
 mod common;
 
 use axum::body::Body;
@@ -12,6 +14,10 @@ const COOKIE_NAME: &str = "session";
 
 #[tokio::test]
 async fn basic_service() {
+    // Exercise: first request writes to the session (causing a cookie to be set), then the second
+    // request sends that cookie back.
+    // Expectation: the second request is "session read only" for the handler, so no `Set-Cookie`
+    // should be emitted.
     let (_key, layer) = common::make_signed_layer(CookieSessionConfig::default());
     let svc = ServiceBuilder::new()
         .layer(layer)
@@ -38,6 +44,10 @@ async fn basic_service() {
 
 #[tokio::test]
 async fn bogus_cookie() {
+    // Exercise: the client sends a `Cookie` header with the session cookie name but an invalid
+    // value ("bogus") which cannot be decoded/verified.
+    // Expectation: the layer should recover by issuing a `Set-Cookie` (clearing/overwriting the
+    // broken cookie) so the client doesn't keep sending an invalid value forever.
     let (_key, layer) = common::make_signed_layer(CookieSessionConfig::default());
     let svc = ServiceBuilder::new()
         .layer(layer)
@@ -54,6 +64,8 @@ async fn bogus_cookie() {
 
 #[tokio::test]
 async fn no_set_cookie_when_unused() {
+    // Exercise: handler does not touch session state at all.
+    // Expectation: no `Set-Cookie` should be emitted.
     let (_key, layer) = common::make_signed_layer(CookieSessionConfig::default());
     let svc = ServiceBuilder::new()
         .layer(layer)
@@ -69,6 +81,8 @@ async fn no_set_cookie_when_unused() {
 
 #[tokio::test]
 async fn name() {
+    // Exercise: configure a custom cookie name via `with_name`.
+    // Expectation: emitted cookie name matches the configured value.
     let config = CookieSessionConfig::default().with_name("my.sid");
     let (_key, layer) = common::make_signed_layer(config);
     let svc = ServiceBuilder::new()
@@ -86,6 +100,8 @@ async fn name() {
 
 #[tokio::test]
 async fn http_only() {
+    // Exercise: default `HttpOnly=true`, then toggle to `HttpOnly=false`.
+    // Expectation: attribute is present by default and absent when disabled.
     let (_key, layer) = common::make_signed_layer(CookieSessionConfig::default());
     let svc = ServiceBuilder::new()
         .layer(layer)
@@ -116,6 +132,8 @@ async fn http_only() {
 
 #[tokio::test]
 async fn same_site_strict() {
+    // Exercise: explicitly set SameSite=Strict.
+    // Expectation: emitted cookie contains SameSite=Strict.
     let config = CookieSessionConfig::default().with_same_site(SameSite::Strict);
     let (_key, layer) = common::make_signed_layer(config);
     let svc = ServiceBuilder::new()
@@ -133,6 +151,8 @@ async fn same_site_strict() {
 
 #[tokio::test]
 async fn same_site_lax() {
+    // Exercise: set SameSite=Lax.
+    // Expectation: emitted cookie contains SameSite=Lax.
     let config = CookieSessionConfig::default().with_same_site(SameSite::Lax);
     let (_key, layer) = common::make_signed_layer(config);
     let svc = ServiceBuilder::new()
@@ -150,6 +170,8 @@ async fn same_site_lax() {
 
 #[tokio::test]
 async fn same_site_none() {
+    // Exercise: set SameSite=None.
+    // Expectation: emitted cookie contains SameSite=None.
     let config = CookieSessionConfig::default().with_same_site(SameSite::None);
     let (_key, layer) = common::make_signed_layer(config);
     let svc = ServiceBuilder::new()
@@ -167,6 +189,8 @@ async fn same_site_none() {
 
 #[tokio::test]
 async fn secure() {
+    // Exercise: set `Secure=true`, then set `Secure=false`.
+    // Expectation: attribute is present when enabled and absent when disabled.
     let config = CookieSessionConfig::default().with_secure(true);
     let (_key, layer) = common::make_signed_layer(config);
     let svc = ServiceBuilder::new()
@@ -198,6 +222,8 @@ async fn secure() {
 
 #[tokio::test]
 async fn path() {
+    // Exercise: set a custom cookie Path.
+    // Expectation: emitted cookie contains the configured Path.
     let config = CookieSessionConfig::default().with_path("/foo/bar");
     let (_key, layer) = common::make_signed_layer(config);
     let svc = ServiceBuilder::new()
@@ -215,6 +241,8 @@ async fn path() {
 
 #[tokio::test]
 async fn domain() {
+    // Exercise: set a cookie Domain.
+    // Expectation: emitted cookie contains the configured Domain.
     let config = CookieSessionConfig::default().with_domain("example.com");
     let (_key, layer) = common::make_signed_layer(config);
     let svc = ServiceBuilder::new()
@@ -232,6 +260,8 @@ async fn domain() {
 
 #[tokio::test]
 async fn cookie_name_default() {
+    // Exercise: default configuration.
+    // Expectation: cookie name defaults to `session`.
     let (_key, layer) = common::make_signed_layer(CookieSessionConfig::default());
     let svc = ServiceBuilder::new()
         .layer(layer)

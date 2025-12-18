@@ -1,5 +1,6 @@
 mod common;
 
+// Tests that signed/private cookie backends detect tampering and refuse to load modified cookies.
 use axum::{Router, body::Body, routing::get};
 use http::{Request, header};
 use tower::ServiceExt as _;
@@ -7,6 +8,7 @@ use tower_cookies::Cookie;
 use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer, Key, Session};
 
 fn tamper_cookie_value(cookie: &mut Cookie<'_>) {
+    // Flip the last character to force a mismatch while keeping the cookie parseable.
     let mut value = cookie.value().to_string();
     let last = value
         .pop()
@@ -17,6 +19,7 @@ fn tamper_cookie_value(cookie: &mut Cookie<'_>) {
 }
 
 fn routes() -> Router {
+    // Routes for writing a user identity into the session and reading it back.
     Router::new()
         .route(
             "/set-user",
@@ -45,6 +48,8 @@ fn routes() -> Router {
 #[cfg(feature = "signed")]
 #[tokio::test]
 async fn signed_rejects_tampering() {
+    // Exercise: set a session value, tamper with the cookie value, then try to read it back.
+    // Expectation: signed cookies fail verification so the session appears empty ("none").
     let key = Key::generate();
     let config = CookieSessionConfig::default().with_secure(false);
     let layer = CookieSessionManagerLayer::signed(key).with_config(config);
@@ -76,6 +81,9 @@ async fn signed_rejects_tampering() {
 #[cfg(feature = "private")]
 #[tokio::test]
 async fn private_rejects_tampering() {
+    // Exercise: set a session value, tamper with the cookie value, then try to read it back.
+    // Expectation: private cookies fail authentication/decryption so the session appears empty
+    // ("none").
     let key = Key::generate();
     let config = CookieSessionConfig::default().with_secure(false);
     let layer = CookieSessionManagerLayer::private(key).with_config(config);

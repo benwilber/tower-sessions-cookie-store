@@ -1,5 +1,6 @@
 #![cfg(feature = "private")]
 
+// Smoke test for the private-cookie backend: writing to the session should emit `Set-Cookie`.
 use axum::body::Body;
 use http::{Request, header};
 use tower::{ServiceBuilder, ServiceExt as _};
@@ -8,6 +9,8 @@ use tower_sessions_cookie_store::{CookieSessionManagerLayer, Key};
 
 #[tokio::test]
 async fn private_cookie_sets_set_cookie() {
+    // Exercise: handler inserts a value into the session with private cookies enabled.
+    // Expectation: response includes a `Set-Cookie` header.
     async fn handler(req: Request<Body>) -> Result<http::Response<Body>, std::convert::Infallible> {
         let session = req
             .extensions()

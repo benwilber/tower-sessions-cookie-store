@@ -2,6 +2,8 @@
 
 mod common;
 
+// Tests for the `dangerous-plaintext` backend. These intentionally demonstrate the lack of
+// integrity protection (tampering is possible).
 use axum::{Router, body::Body, routing::get};
 use http::{Request, header};
 use tower::ServiceExt as _;
@@ -10,6 +12,7 @@ use tower_sessions_cookie_store::{
 };
 
 fn app() -> Router {
+    // Router using plaintext cookies with `secure=false` so tests can use plain HTTP semantics.
     let config = CookieSessionConfig::default().with_secure(false);
     let layer = CookieSessionManagerLayer::dangerous_plaintext().with_config(config);
 
@@ -38,6 +41,8 @@ fn app() -> Router {
 
 #[tokio::test]
 async fn plaintext_roundtrip() {
+    // Exercise: set a session value, then read it back using the cookie from the response.
+    // Expectation: plaintext cookies round-trip the value.
     let app = app();
 
     let req = Request::builder()
@@ -63,6 +68,8 @@ async fn plaintext_roundtrip() {
 
 #[tokio::test]
 async fn plaintext_allows_tampering() {
+    // Exercise: set a value, decode/modify the cookie payload, re-encode it, and send it back.
+    // Expectation: the tampered value is accepted (no signature/integrity checking).
     let app = app();
 
     let req = Request::builder()
