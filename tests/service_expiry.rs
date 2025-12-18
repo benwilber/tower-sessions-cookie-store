@@ -9,9 +9,7 @@ use time::{Duration, OffsetDateTime};
 use tower::{ServiceBuilder, ServiceExt as _};
 use tower_service::Service as _;
 
-use tower_sessions_cookie_store::{CookieSessionConfig, Expiry};
-
-const COOKIE_NAME: &str = "session";
+use tower_sessions_cookie_store::{CookieSessionConfig, DEFAULT_COOKIE_NAME, Expiry};
 
 fn assert_max_age_seconds_close(cookie: &tower_cookies::Cookie<'_>, expected_seconds: i64) {
     // Max-Age is computed relative to "now", so assertions allow a small amount of clock drift.
@@ -103,7 +101,7 @@ async fn expiry_on_session_end_always_save() {
     let rec1 = common::decode_record(&common::unsigned_cookie_value(
         cookie1.clone(),
         &key,
-        COOKIE_NAME,
+        DEFAULT_COOKIE_NAME,
     ));
 
     let req2 = Request::builder()
@@ -115,7 +113,7 @@ async fn expiry_on_session_end_always_save() {
     let rec2 = common::decode_record(&common::unsigned_cookie_value(
         cookie2.clone(),
         &key,
-        COOKIE_NAME,
+        DEFAULT_COOKIE_NAME,
     ));
 
     assert!(cookie2.max_age().is_none());
@@ -145,7 +143,7 @@ async fn expiry_on_inactivity_always_save() {
     let rec1 = common::decode_record(&common::unsigned_cookie_value(
         cookie1.clone(),
         &key,
-        COOKIE_NAME,
+        DEFAULT_COOKIE_NAME,
     ));
 
     let req2 = Request::builder()
@@ -157,7 +155,7 @@ async fn expiry_on_inactivity_always_save() {
     let rec2 = common::decode_record(&common::unsigned_cookie_value(
         cookie2.clone(),
         &key,
-        COOKIE_NAME,
+        DEFAULT_COOKIE_NAME,
     ));
 
     assert_max_age_seconds_close(&cookie2, inactivity.whole_seconds());
@@ -187,7 +185,7 @@ async fn expiry_at_date_time_always_save() {
     let rec1 = common::decode_record(&common::unsigned_cookie_value(
         cookie1.clone(),
         &key,
-        COOKIE_NAME,
+        DEFAULT_COOKIE_NAME,
     ));
 
     let req2 = Request::builder()
@@ -199,7 +197,7 @@ async fn expiry_at_date_time_always_save() {
     let rec2 = common::decode_record(&common::unsigned_cookie_value(
         cookie2.clone(),
         &key,
-        COOKIE_NAME,
+        DEFAULT_COOKIE_NAME,
     ));
 
     let expected = (expiry_time - OffsetDateTime::now_utc()).whole_seconds();

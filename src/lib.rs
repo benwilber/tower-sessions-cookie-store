@@ -51,6 +51,7 @@ pub use tower_sessions_core::{Session, session::Expiry, session_store};
 pub use tower_cookies::Key;
 
 pub use crate::config::CookieSessionConfig;
+pub use crate::config::DEFAULT_COOKIE_NAME;
 pub use crate::controller::CookieController;
 pub use crate::format::{decode_record, encode_record};
 pub use crate::layer::CookieSessionManagerLayer;

@@ -8,9 +8,7 @@ use axum::body::Body;
 use http::{Request, header};
 use tower::{ServiceBuilder, ServiceExt as _};
 
-use tower_sessions_cookie_store::{CookieSessionConfig, SameSite};
-
-const COOKIE_NAME: &str = "session";
+use tower_sessions_cookie_store::{CookieSessionConfig, DEFAULT_COOKIE_NAME, SameSite};
 
 #[tokio::test]
 async fn basic_service() {
@@ -273,5 +271,5 @@ async fn cookie_name_default() {
     let res = svc.oneshot(req).await.expect("service call succeeds");
     let session_cookie = common::get_session_cookie(&res);
 
-    assert_eq!(session_cookie.name(), COOKIE_NAME);
+    assert_eq!(session_cookie.name(), DEFAULT_COOKIE_NAME);
 }

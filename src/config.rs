@@ -10,6 +10,9 @@ use tower_cookies::Cookie;
 
 use crate::{Expiry, SameSite};
 
+/// Default cookie name used when none is configured.
+pub const DEFAULT_COOKIE_NAME: &str = "session";
+
 #[derive(Debug, Clone)]
 /// Configuration for cookie-backed sessions.
 ///
@@ -30,7 +33,7 @@ pub struct CookieSessionConfig {
 impl Default for CookieSessionConfig {
     fn default() -> Self {
         Self {
-            name: "session".into(),
+            name: DEFAULT_COOKIE_NAME.into(),
             http_only: true,
             same_site: SameSite::Strict,
             expiry: None,
