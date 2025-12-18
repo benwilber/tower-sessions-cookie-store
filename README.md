@@ -13,13 +13,6 @@ integrates with `tower-sessions` and works with Axum extractors.
 - `dangerous-plaintext`: plaintext cookies (no integrity, no confidentiality). Intended only for
   testing/debugging.
 
-## Security notes
-
-- Cookie sessions are bearer tokens. If a cookie is stolen, it can be replayed until it expires.
-- The `dangerous-plaintext` feature offers **no tamper resistance**. A client can trivially edit
-  the cookie to escalate privileges and impersonate other users (including staff/admin). Do not
-  enable or use it in real applications.
-
 ## Usage (Axum)
 
 ### Signed cookies (default)
@@ -37,34 +30,9 @@ async fn handler(session: Session) -> String {
 let key = Key::generate();
 let config = CookieSessionConfig::default()
     .with_secure(false); // set true in production (HTTPS)
-let app = Router::new()
+let router = Router::new()
     .route("/", get(handler))
     .layer(CookieSessionManagerLayer::signed(key).with_config(config));
-```
-
-### Private cookies (encrypted)
-
-```rust
-use axum::{routing::get, Router};
-use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer, Key};
-
-let key = Key::generate();
-let config = CookieSessionConfig::default();
-let app = Router::new()
-    .route("/", get(|| async { "ok" }))
-    .layer(CookieSessionManagerLayer::private(key).with_config(config));
-```
-
-### Dangerous plaintext cookies (testing/debugging only)
-
-```rust
-use axum::{routing::get, Router};
-use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer};
-
-let config = CookieSessionConfig::default().with_secure(false);
-let app = Router::new()
-    .route("/", get(|| async { "ok" }))
-    .layer(CookieSessionManagerLayer::dangerous_plaintext().with_config(config));
 ```
 
 ## Configuration
@@ -92,18 +60,15 @@ let app = Router::new()
 The cookie value encodes the full session record using a versioned, base64url-encoded JSON
 envelope. The format is an implementation detail and may change between releases.
 
-For testing/debugging, the crate exposes `tower_sessions_cookie_store::format::{encode_record,
+For testing/debugging, the crate exposes `tower_sessions_cookie_store::{encode_record,
 decode_record}`.
 
-## Re-exports
+## Security notes
 
-This crate re-exports commonly used types to avoid requiring direct dependency alignment:
-
-- `tower_sessions_cookie_store::Session`
-- `tower_sessions_cookie_store::Expiry`
-- `tower_sessions_cookie_store::SameSite`
-- `tower_sessions_cookie_store::Key` (when `signed` and/or `private` are enabled)
-- `tower_sessions_cookie_store::session_store` (including `session_store::Error`)
+- Cookie sessions are bearer tokens. If a cookie is stolen, it can be replayed until it expires.
+- The `dangerous-plaintext` feature offers **no tamper resistance**. A client can trivially edit
+  the cookie to escalate privileges and impersonate other users (including staff/admin). Do not
+  enable or use it in real applications.
 
 ## License
 

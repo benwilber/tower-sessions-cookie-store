@@ -46,6 +46,7 @@ pub use tower_cookies::Key;
 
 pub use crate::config::CookieSessionConfig;
 pub use crate::controller::CookieController;
+pub use crate::format::{decode_record, encode_record};
 pub use crate::layer::CookieSessionManagerLayer;
 
 #[cfg(feature = "signed")]
