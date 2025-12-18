@@ -1,6 +1,6 @@
 //! Helpers for encoding/decoding the cookie session payload format.
 //!
-//! This is primarily useful for testing and debugging.
+//! This module backs the internal cookie encoding and is also handy for testing and debugging.
 //!
 //! Note: the on-wire format is versioned, but it is still considered an implementation detail and
 //! may evolve.
