@@ -15,7 +15,7 @@ ready: fmt lint test
     @echo "Ready!"
 
 doc:
-    cargo doc
+    cargo doc --no-deps --all-features
     
 opendoc:
-    cargo doc --open
+    cargo doc --no-deps --all-features --open
