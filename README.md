@@ -109,10 +109,14 @@ decode_record}`.
   - No. Cookies are limited (~4 KB by default). Use a server-side store if you need larger
     payloads.
 - Can I use this cross-site?
-  - Set `SameSite::None` and `secure = true` (required by browsers).
+  - Set `SameSite::None` and `secure = true` (required by browsers).  It is very unlikely that you actually want to do this.  Use caution.
 - Do I need HTTPS in production?
   - Yes; leave `secure = true` so browsers only send the cookie over HTTPS. Only disable it locally
     for development.
+- Can I allow JavaScript to read my session cookies?
+  - Strongly discouraged. Disabling HttpOnly (via `config.with_http_only(false)`) lets any
+    injected script read and exfiltrate the bearer token, enabling replay. Only do this if you have
+    a very specific, XSS-hardened reason.
 
 ## License
 
