@@ -29,12 +29,12 @@ async fn handler(session: Session) -> String {
     format!("n={n}")
 }
 
-let key = Key::generate();
+let secret_key = Key::generate(); // store this someplace safe
 let config = CookieSessionConfig::default()
     .with_secure(false); // set true in production (HTTPS)
 let router = Router::new()
     .route("/", get(handler))
-    .layer(CookieSessionManagerLayer::signed(key).with_config(config));
+    .layer(CookieSessionManagerLayer::signed(secret_key).with_config(config));
 ```
 
 ## Configuration

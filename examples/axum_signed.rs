@@ -21,7 +21,7 @@ async fn index(session: Session) -> String {
 
 #[tokio::main]
 async fn main() {
-    let key = Key::generate();
+    let secret_key = Key::generate(); // store this someplace safe
     let session_config = CookieSessionConfig::default()
         // Default: "session"
         .with_name("session")
@@ -43,7 +43,7 @@ async fn main() {
         .with_max_cookie_bytes(4096)
         // Default: true
         .with_clear_on_decode_error(true);
-    let session_layer = CookieSessionManagerLayer::signed(key).with_config(session_config);
+    let session_layer = CookieSessionManagerLayer::signed(secret_key).with_config(session_config);
 
     let app = Router::new().route("/", get(index)).layer(session_layer);
 
