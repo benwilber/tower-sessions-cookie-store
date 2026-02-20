@@ -6,7 +6,7 @@ use std::sync::{
 use async_trait::async_trait;
 use time::OffsetDateTime;
 use tower_cookies::{Cookie, Cookies};
-use tower_sessions_core::{
+use tower_sessions::{
     SessionStore,
     session::{Id, Record},
     session_store,
@@ -20,7 +20,7 @@ pub(crate) struct CookieStore<C: CookieController> {
     controller: C,
     config: CookieSessionConfig,
     decoded_record: Mutex<Option<Record>>,
-    expiry_hint: Mutex<Option<tower_sessions_core::session::Expiry>>,
+    expiry_hint: Mutex<Option<tower_sessions::session::Expiry>>,
     cookie_written: AtomicBool,
     cookie_removed: AtomicBool,
 }
@@ -44,7 +44,7 @@ impl<C: CookieController> CookieStore<C> {
         }
     }
 
-    pub(crate) fn set_expiry_hint(&self, expiry: Option<tower_sessions_core::session::Expiry>) {
+    pub(crate) fn set_expiry_hint(&self, expiry: Option<tower_sessions::session::Expiry>) {
         if let Ok(mut guard) = self.expiry_hint.lock() {
             *guard = expiry;
         }

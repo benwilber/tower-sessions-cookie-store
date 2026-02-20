@@ -2,12 +2,32 @@ mod common;
 
 // Tests for the `key-expansion` feature, which enables `Key::derive_from()` for deterministic key
 // derivation from a master key.
+#[cfg(any(
+    all(feature = "key-expansion", feature = "signed"),
+    all(feature = "key-expansion", feature = "private")
+))]
 use axum::{Router, body::Body, routing::get};
+#[cfg(any(
+    all(feature = "key-expansion", feature = "signed"),
+    all(feature = "key-expansion", feature = "private")
+))]
 use http::{Request, header};
+#[cfg(any(
+    all(feature = "key-expansion", feature = "signed"),
+    all(feature = "key-expansion", feature = "private")
+))]
 use tower::ServiceExt as _;
 
+#[cfg(any(
+    all(feature = "key-expansion", feature = "signed"),
+    all(feature = "key-expansion", feature = "private")
+))]
 use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer, Key, Session};
 
+#[cfg(any(
+    all(feature = "key-expansion", feature = "signed"),
+    all(feature = "key-expansion", feature = "private")
+))]
 fn routes() -> Router {
     // Routes to write and read a single session key.
     Router::new()

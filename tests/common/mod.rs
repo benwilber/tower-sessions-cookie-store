@@ -10,8 +10,8 @@ use axum::body::Body;
 use http::{HeaderMap, Request, Response, header};
 use http_body_util::BodyExt as _;
 use tower_cookies::{Cookie, Key, cookie::CookieJar};
+use tower_sessions::session::Record;
 use tower_sessions_cookie_store::{CookieSessionConfig, CookieSessionManagerLayer, Session};
-use tower_sessions_core::session::Record;
 
 pub async fn body_string(body: Body) -> String {
     // Collect an Axum body into a UTF-8 string for assertions.

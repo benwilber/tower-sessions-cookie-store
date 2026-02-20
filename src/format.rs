@@ -7,7 +7,7 @@
 
 use base64::{Engine as _, engine::general_purpose::URL_SAFE_NO_PAD};
 use serde::{Deserialize, Serialize};
-use tower_sessions_core::{session::Record, session_store};
+use tower_sessions::{session::Record, session_store};
 
 const VERSION: u8 = 1;
 

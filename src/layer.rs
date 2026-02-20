@@ -1,7 +1,7 @@
 //! Tower layer and service for cookie-backed sessions.
 //!
 //! `CookieSessionManagerLayer` wraps [`tower_cookies::CookieManager`] and inserts a
-//! [`tower_sessions_core::Session`] into request extensions. The session record is stored in a
+//! [`tower_sessions::Session`] into request extensions. The session record is stored in a
 //! cookie via the configured [`crate::CookieController`].
 
 use std::{
@@ -15,7 +15,7 @@ use http::{Request, Response};
 use tower_cookies::CookieManager;
 use tower_layer::Layer;
 use tower_service::Service;
-use tower_sessions_core::Session;
+use tower_sessions::Session;
 
 use crate::{
     config::CookieSessionConfig, controller::CookieController, format, store::CookieStore,
